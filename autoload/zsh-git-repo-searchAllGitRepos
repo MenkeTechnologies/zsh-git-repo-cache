@@ -1,0 +1,24 @@
+# -*- mode: sh -*-
+# vim: set ft=sh:
+function zsh-git-repo-searchAllGitRepos(){
+
+    local shouldRegen
+
+    function goThere(){
+        cat "$ZPWR_ALL_GIT_DIRS" |
+        eval "$ZPWR_FZF $FZF_SEARCH_GIT_OPTS" |
+        perl -ne 'chomp; print "cd \"$_\""'
+    }
+
+    shouldRegen="$1"
+    if [[ $shouldRegen == regen ]] || [[ ! -f "$ZPWR_ALL_GIT_DIRS" ]]; then
+        zsh-git-repo-regenAllGitRepos
+    elif [[ ! -s "$ZPWR_ALL_GIT_DIRS" ]]; then
+        prettyPrint "must regen $ZPWR_ALL_GIT_DIRS because empty."
+        zsh-git-repo-regenAllGitRepos regen
+    fi
+
+    zsh-git-repo-searchGitCommon
+}
+
+zsh-git-repo-searchAllGitRepos "$@"
