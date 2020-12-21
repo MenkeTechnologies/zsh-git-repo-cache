@@ -4,7 +4,7 @@ function zsh-git-repo-searchAllGitRepos(){
 
     local shouldRegen
 
-    function goThere(){
+    function zsh-git-repo-goThere(){
         cat "$ZPWR_ALL_GIT_DIRS" |
         eval "$ZPWR_FZF $FZF_SEARCH_GIT_OPTS" |
         perl -ne 'chomp; print "cd \"$_\""'

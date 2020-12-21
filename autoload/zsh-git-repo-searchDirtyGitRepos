@@ -4,7 +4,7 @@ function zsh-git-repo-searchDirtyGitRepos(){
 
     local shouldRegen
 
-    function goThere(){
+    function zsh-git-repo-goThere(){
 
     {
         while read; do

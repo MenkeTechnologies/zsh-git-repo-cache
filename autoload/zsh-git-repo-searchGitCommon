@@ -4,7 +4,7 @@ function zsh-git-repo-searchGitCommon(){
 
     local out
 
-    out="$(goThere)"
+    out="$(zsh-git-repo-goThere)"
     echo "$out"
     eval "$out"
 }
