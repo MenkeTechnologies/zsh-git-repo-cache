@@ -17,3 +17,7 @@ fpath+=("${0:h}/autoload")
 
 autoload -Uz "${0:h}/autoload/"*(.:t)
 
+if (( ${+ZPWR_VERBS} )); then
+    ZPWR_VERBS[gitrepos]='zsh-git-repo-searchAllGitRepos=search \$ZPWR_ALL_GIT_DIRS in fzf'
+    ZPWR_VERBS[gitreposdirty]='zsh-git-repo-searchDirtyGitRepos=search dirty \$ZPWR_ALL_GIT_DIRS in fzf'
+fi
