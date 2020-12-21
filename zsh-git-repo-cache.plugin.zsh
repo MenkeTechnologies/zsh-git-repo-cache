@@ -11,6 +11,21 @@ fi
 
 if [[ -z "$ZPWR_FZF" ]]; then
     export ZPWR_FZF="fzf"
+fi 
+
+if ! type -- exists>/dev/null 2>&1; then
+
+        function exists(){
+            #alternative is command -v
+            type -- "$1" &>/dev/null || return 1 &&
+            [[ $(type -- "$1" 2>/dev/null) != *"suffix alias"* ]]
+        }
+fi
+ 
+if ! exists zpwrPrettyPrint; then
+    zpwrPrettyPrint(){
+        echo "$@"
+    }
 fi
 
 fpath+=("${0:h}/autoload")
