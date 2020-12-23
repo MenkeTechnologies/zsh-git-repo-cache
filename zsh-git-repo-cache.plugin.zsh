@@ -5,6 +5,10 @@ if [[ -z "$ZPWR_ALL_GIT_DIRS" ]]; then
     export ZPWR_ALL_GIT_DIRS="$HOME/.zsh-git-repo-cache"
 fi
 
+if [[ -z "$ZPWR_ALL_GIT_DIRS_DIRTY" ]]; then
+    export ZPWR_ALL_GIT_DIRS=_DIRTY"$HOME/.zsh-git-repo-cache-dirty"
+fi
+
 if [[ -z "$ZPWR_TEMPFILE3" ]]; then
     export ZPWR_TEMPFILE3="$TMPDIR/.zsh-git-repo-temp"
 fi

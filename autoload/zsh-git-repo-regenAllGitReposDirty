@@ -1,0 +1,27 @@
+# -*- mode: sh -*-
+# vim: set ft=sh:
+function zsh-git-repo-regenAllGitReposDirty(){
+
+    local REPLY
+
+    if [[ ! -s "$ZPWR_ALL_GIT_DIRS" ]]; then
+        zsh-git-repo-regenAllGitRepos regen
+    fi
+
+    if [[ ! -s "$ZPWR_ALL_GIT_DIRS_DIRTY" ]]; then
+        zpwrPrettyPrint "Regen ZPWR_ALL_GIT_DIRS_DIRTY '$ZPWR_ALL_GIT_DIRS_DIRTY' with all dirty git dirs from ZPWR_ALL_GIT_DIRS '$ZPWR_ALL_GIT_DIRS'"
+        {
+            while read; do
+                builtin cd -q "$REPLY" || continue
+                if ! git diff-index --quiet HEAD -- 2>/dev/null;then
+                    echo "$REPLY"
+                elif [[ ! -z "$(git ls-files --exclude-standard --others 2>/dev/null)" ]];then
+                    echo "$REPLY"
+                fi
+            done < "$ZPWR_ALL_GIT_DIRS"
+        } > "$ZPWR_ALL_GIT_DIRS_DIRTY"
+
+    fi
+}
+
+zsh-git-repo-regenAllGitReposDirty "$@"
