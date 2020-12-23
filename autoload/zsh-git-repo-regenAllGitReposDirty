@@ -2,7 +2,7 @@
 # vim: set ft=sh:
 function zsh-git-repo-regenAllGitReposDirty(){
 
-    local REPLY
+    local REPLY origPwd
 
     if [[ ! -s "$ZPWR_ALL_GIT_DIRS" ]]; then
         zsh-git-repo-regenAllGitRepos regen
@@ -10,6 +10,8 @@ function zsh-git-repo-regenAllGitReposDirty(){
 
     if [[ ! -s "$ZPWR_ALL_GIT_DIRS_DIRTY" ]]; then
         zpwrPrettyPrint "Regen ZPWR_ALL_GIT_DIRS_DIRTY '$ZPWR_ALL_GIT_DIRS_DIRTY' with all dirty git dirs from ZPWR_ALL_GIT_DIRS '$ZPWR_ALL_GIT_DIRS'"
+        origPwd="$PWD"
+
         {
             while read; do
                 builtin cd -q "$REPLY" || continue
@@ -20,6 +22,8 @@ function zsh-git-repo-regenAllGitReposDirty(){
                 fi
             done < "$ZPWR_ALL_GIT_DIRS"
         } > "$ZPWR_ALL_GIT_DIRS_DIRTY"
+
+        builtin cd -q "$origPwd"
 
     fi
 }

@@ -27,4 +27,10 @@ export ZPWR_ALL_GIT_DIRS="$HOME/.zsh-git-repo-cache"
 export ZPWR_ALL_GIT_DIRS="$HOME/.zsh-git-repo-cache"
 ```
 
+### zsh-git-repo-searchDirtyGitReposCache
+- search for dirty repos from a cache file.  Git repo cache file will also be created if does not exist.
+```sh
+export ZPWR_ALL_GIT_DIRS_DIRTY="$HOME/.zsh-git-repo-cache-dirty"
+```
+
 # created by MenkeTechnologies
