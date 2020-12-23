@@ -13,16 +13,16 @@ if [[ -z "$ZPWR_FZF" ]]; then
     export ZPWR_FZF="fzf"
 fi 
 
-if ! type -- exists>/dev/null 2>&1; then
+if ! type -- zpwrExists>/dev/null 2>&1; then
 
-        function exists(){
+        function zpwrExists(){
             #alternative is command -v
             type -- "$1" &>/dev/null || return 1 &&
             [[ $(type -- "$1" 2>/dev/null) != *"suffix alias"* ]]
         }
 fi
  
-if ! exists zpwrPrettyPrint; then
+if ! zpwrExists zpwrPrettyPrint; then
     zpwrPrettyPrint(){
         echo "$@"
     }
