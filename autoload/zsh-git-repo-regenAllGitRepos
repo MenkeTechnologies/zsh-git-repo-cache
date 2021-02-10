@@ -16,6 +16,7 @@ function zsh-git-repo-regenAllGitRepos(){
     # removing system read only mounted dirs on macOS
     if [[ $ZPWR_OS_TYPE == darwin ]]; then
         perl -i -pe 's@^/System/Volumes/Data@@' "$ZPWR_TEMPFILE3"
+        perl -i -pe 's@^/System/Volumes/Update/mnt1@@' "$ZPWR_TEMPFILE3"
     fi
 
     sort "$ZPWR_TEMPFILE3" | uniq > "$ZPWR_ALL_GIT_DIRS"
