@@ -9,6 +9,10 @@ if [[ -z "$ZPWR_ALL_GIT_DIRS_DIRTY" ]]; then
     export ZPWR_ALL_GIT_DIRS=_DIRTY"$HOME/.zsh-git-repo-cache-dirty"
 fi
 
+if [[ -z "$ZPWR_ALL_GIT_DIRS_CLEAN" ]]; then
+    export ZPWR_ALL_GIT_DIRS_CLEAN="$HOME/.zsh-git-repo-cache-clean"
+fi
+
 if [[ -z "$ZPWR_TEMPFILE3" ]]; then
     export ZPWR_TEMPFILE3="$TMPDIR/.zsh-git-repo-temp"
 fi
@@ -38,6 +42,8 @@ autoload -Uz "${0:h}/autoload/"*(.:t)
 
 if (( ${+ZPWR_VERBS} )); then
     ZPWR_VERBS[gitrepos]='zsh-git-repo-searchAllGitRepos=search \$ZPWR_ALL_GIT_DIRS in fzf'
-    ZPWR_VERBS[gitreposdirty]='zsh-git-repo-searchDirtyGitRepos=search dirty \$ZPWR_ALL_GIT_DIRS in fzf'
+    ZPWR_VERBS[gitreposclean]='zsh-git-repo-searchCleanGitRepos=search clean \$ZPWR_ALL_GIT_DIRS_CLEAN in fzf'
+    ZPWR_VERBS[gitreposdirty]='zsh-git-repo-searchDirtyGitRepos=search dirty \$ZPWR_ALL_GIT_DIRS_DIRTY in fzf'
+    ZPWR_VERBS[gitreposcleancache]='zsh-git-repo-searchCleanGitReposCache=search clean cached \$ZPWR_ALL_GIT_DIRS_CLEAN in fzf'
     ZPWR_VERBS[gitreposdirtycache]='zsh-git-repo-searchDirtyGitReposCache=search dirty cached \$ZPWR_ALL_GIT_DIRS_DIRTY in fzf'
 fi
