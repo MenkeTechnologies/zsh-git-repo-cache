@@ -9,11 +9,7 @@ function zsh-git-repo-searchCleanGitRepos(){
     {
         while read; do
             builtin cd "$REPLY" 2>/dev/null || continue
-            if ! git diff-index --quiet HEAD -- 2>/dev/null;then
-                :
-            elif [[ ! -z "$(git ls-files --exclude-standard --others 2>/dev/null)" ]];then
-                :
-            else
+            if git diff-index --quiet HEAD -- 2>/dev/null && [[ -z "$(git ls-files --exclude-standard --others 2>/dev/null)" ]];then
                 echo "$REPLY"
             fi
         done < "$ZPWR_ALL_GIT_DIRS"
