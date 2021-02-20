@@ -9,7 +9,7 @@ function zsh-git-repo-regenAllGitReposDirty(){
     fi
 
     zpwrPrettyPrint "Regen ZPWR_ALL_GIT_DIRS_DIRTY '$ZPWR_ALL_GIT_DIRS_DIRTY' with all dirty git dirs from ZPWR_ALL_GIT_DIRS '$ZPWR_ALL_GIT_DIRS'"
-    zpwrPrettyPrint "Regen ZPWR_ALL_GIT_DIRS_CLEAN'$ZPWR_ALL_GIT_DIRS_CLEAN' with all clean git dirs from ZPWR_ALL_GIT_DIRS '$ZPWR_ALL_GIT_DIRS'"
+    zpwrPrettyPrint "Regen ZPWR_ALL_GIT_DIRS_CLEAN '$ZPWR_ALL_GIT_DIRS_CLEAN' with all clean git dirs from ZPWR_ALL_GIT_DIRS '$ZPWR_ALL_GIT_DIRS'"
 
     origPwd="$PWD"
     exec 3> "$ZPWR_ALL_GIT_DIRS_DIRTY"
