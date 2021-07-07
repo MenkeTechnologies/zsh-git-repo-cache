@@ -2,13 +2,15 @@
 # vim: set ft=sh:
 function zsh-git-repo-searchDirtyGitRepos(){
 
-    local shouldRegen
+    local shouldRegen cmd REPLY
 
     function zsh-git-repo-goThere(){
 
     {
         while read; do
-            builtin cd "$REPLY" 2>/dev/null || continue
+
+            test -d "$REPLY" && builtin cd "$REPLY" || continue
+
             if ! git diff-index --quiet HEAD -- 2>/dev/null;then
                 echo "$REPLY"
             elif [[ ! -z "$(git ls-files --exclude-standard --others 2>/dev/null)" ]];then
@@ -21,16 +23,19 @@ function zsh-git-repo-searchDirtyGitRepos(){
     }
 
     function zsh-git-repo-listThere(){
-        {
+        (
+            exec 2>/dev/null
             while read; do
-                builtin cd "$REPLY" 2>/dev/null || continue
-                if ! git diff-index --quiet HEAD -- 2>/dev/null;then
+
+                test -d "$REPLY" && builtin cd "$REPLY" || continue
+
+                if ! git diff-index --quiet HEAD -- ;then
                     echo "$REPLY"
-                elif [[ ! -z "$(git ls-files --exclude-standard --others 2>/dev/null)" ]];then
+                elif [[ ! -z "$(git ls-files --exclude-standard --others)" ]];then
                     echo "$REPLY"
                 fi
             done < "$ZPWR_ALL_GIT_DIRS"
-        }
+        )
     }
 
     shouldRegen="$1"
