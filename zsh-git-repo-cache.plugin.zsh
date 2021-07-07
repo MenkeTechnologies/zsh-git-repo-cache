@@ -29,7 +29,7 @@ if ! type -a -- zpwrExists>/dev/null 2>&1; then
             [[ $(type -a -- "$1" 2>/dev/null) != *"suffix alias"* ]]
         }
 fi
- 
+
 if ! zpwrExists zpwrPrettyPrint; then
     zpwrPrettyPrint(){
         echo "$@"
@@ -41,6 +41,12 @@ fpath+=("${0:h}/autoload")
 autoload -Uz "${0:h}/autoload/"*(.:t)
 
 if (( ${+ZPWR_VERBS} )); then
+    ZPWR_VERBS[gitreposlist]='zsh-git-repo-searchAllGitRepos n list=search \$ZPWR_ALL_GIT_DIRS'
+    ZPWR_VERBS[gitreposcleanlist]='zsh-git-repo-searchCleanGitRepos n list=search clean \$ZPWR_ALL_GIT_DIRS_CLEAN'
+    ZPWR_VERBS[gitreposdirtylist]='zsh-git-repo-searchDirtyGitRepos n list =search dirty \$ZPWR_ALL_GIT_DIRS_DIRTY'
+    ZPWR_VERBS[gitreposcleancachelist]='zsh-git-repo-searchCleanGitReposCache n list=search clean cached \$ZPWR_ALL_GIT_DIRS_CLEAN'
+    ZPWR_VERBS[gitreposdirtycachelist]='zsh-git-repo-searchDirtyGitReposCache n list=search dirty cached \$ZPWR_ALL_GIT_DIRS_DIRTY'
+
     ZPWR_VERBS[gitrepos]='zsh-git-repo-searchAllGitRepos=search \$ZPWR_ALL_GIT_DIRS in fzf'
     ZPWR_VERBS[gitreposclean]='zsh-git-repo-searchCleanGitRepos=search clean \$ZPWR_ALL_GIT_DIRS_CLEAN in fzf'
     ZPWR_VERBS[gitreposdirty]='zsh-git-repo-searchDirtyGitRepos=search dirty \$ZPWR_ALL_GIT_DIRS_DIRTY in fzf'

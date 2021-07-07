@@ -2,15 +2,21 @@
 # vim: set ft=sh:
 function zsh-git-repo-searchAllGitRepos(){
 
-    local shouldRegen
-
+    local shouldRegen cmd
+ 
     function zsh-git-repo-goThere(){
         cat "$ZPWR_ALL_GIT_DIRS" |
         eval "$ZPWR_FZF $FZF_SEARCH_GIT_OPTS" |
         perl -ne 'chomp; print "cd \"$_\""'
     }
 
+    function zsh-git-repo-listThere(){
+        cat "$ZPWR_ALL_GIT_DIRS"
+    }
+
     shouldRegen="$1"
+    cmd="$2"
+
     if [[ $shouldRegen == regen ]] || [[ ! -f "$ZPWR_ALL_GIT_DIRS" ]]; then
         zsh-git-repo-regenAllGitRepos
     elif [[ ! -s "$ZPWR_ALL_GIT_DIRS" ]]; then
@@ -18,7 +24,11 @@ function zsh-git-repo-searchAllGitRepos(){
         zsh-git-repo-regenAllGitRepos regen
     fi
 
-    zsh-git-repo-searchGitCommon
+    if [[ $cmd == list ]]; then
+        zsh-git-repo-listThere
+    else
+        zsh-git-repo-searchGitCommon
+    fi
 }
 
 zsh-git-repo-searchAllGitRepos "$@"
