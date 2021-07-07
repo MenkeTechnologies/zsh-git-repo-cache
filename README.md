@@ -45,4 +45,19 @@ export ZPWR_ALL_GIT_DIRS_DIRTY="$HOME/.zsh-git-repo-cache-dirty"
 export ZPWR_ALL_GIT_DIRS_CLEAN="$HOME/.zsh-git-repo-cache-clean"
 ```
 
+[zpwr](https://github.com/MenkeTechnologies/zpwr) verbs added are:
+```sh
+ZPWR_VERBS[gitreposlist]='zsh-git-repo-searchAllGitRepos n list=search \$ZPWR_ALL_GIT_DIRS'
+ZPWR_VERBS[gitreposcleanlist]='zsh-git-repo-searchCleanGitRepos n list=search clean \$ZPWR_ALL_GIT_DIRS_CLEAN'
+ZPWR_VERBS[gitreposdirtylist]='zsh-git-repo-searchDirtyGitRepos n list =search dirty \$ZPWR_ALL_GIT_DIRS_DIRTY'
+ZPWR_VERBS[gitreposcleancachelist]='zsh-git-repo-searchCleanGitReposCache n list=search clean cached \$ZPWR_ALL_GIT_DIRS_CLEAN'
+ZPWR_VERBS[gitreposdirtycachelist]='zsh-git-repo-searchDirtyGitReposCache n list=search dirty cached \$ZPWR_ALL_GIT_DIRS_DIRTY'
+
+ZPWR_VERBS[gitrepos]='zsh-git-repo-searchAllGitRepos=search \$ZPWR_ALL_GIT_DIRS in fzf'
+ZPWR_VERBS[gitreposclean]='zsh-git-repo-searchCleanGitRepos=search clean \$ZPWR_ALL_GIT_DIRS_CLEAN in fzf'
+ZPWR_VERBS[gitreposdirty]='zsh-git-repo-searchDirtyGitRepos=search dirty \$ZPWR_ALL_GIT_DIRS_DIRTY in fzf'
+ZPWR_VERBS[gitreposcleancache]='zsh-git-repo-searchCleanGitReposCache=search clean cached \$ZPWR_ALL_GIT_DIRS_CLEAN in fzf'
+ZPWR_VERBS[gitreposdirtycache]='zsh-git-repo-searchDirtyGitReposCache=search dirty cached \$ZPWR_ALL_GIT_DIRS_DIRTY in fzf'
+```
+
 # created by MenkeTechnologies
