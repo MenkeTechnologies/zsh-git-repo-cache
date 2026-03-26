@@ -1,63 +1,102 @@
 # zsh-git-repo-cache
 
-
-## Summary
-
-This plugin searches root of filesystem at /  for all git repos and adds to cache file for searching.
-
-## Functions
-
-### zsh-git-repo-regenAllGitRepos
-- rebuild the cache file which is at:
-```sh
-export ZPWR_ALL_GIT_DIRS="$HOME/.zsh-git-repo-cache"
 ```
-- uses fd-find if exists otherwise find to search /
-
-### zsh-git-repo-searchAllGitRepos
-- search the cache file which is at:
-```sh
-export ZPWR_ALL_GIT_DIRS="$HOME/.zsh-git-repo-cache"
+ ██████╗ ██╗████████╗    ██████╗ ███████╗██████╗  ██████╗
+██╔════╝ ██║╚══██╔══╝    ██╔══██╗██╔════╝██╔══██╗██╔═══██╗
+██║  ███╗██║   ██║       ██████╔╝█████╗  ██████╔╝██║   ██║
+██║   ██║██║   ██║       ██╔══██╗██╔══╝  ██╔═══╝ ██║   ██║
+╚██████╔╝██║   ██║       ██║  ██║███████╗██║     ╚██████╔╝
+ ╚═════╝ ╚═╝   ╚═╝       ╚═╝  ╚═╝╚══════╝╚═╝      ╚═════╝
+       ██████╗ █████╗  ██████╗██╗  ██╗███████╗
+      ██╔════╝██╔══██╗██╔════╝██║  ██║██╔════╝
+      ██║     ███████║██║     ███████║█████╗
+      ██║     ██╔══██║██║     ██╔══██║██╔══╝
+      ╚██████╗██║  ██║╚██████╗██║  ██║███████╗
+       ╚═════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝
 ```
 
+> *Jack into the filesystem. Index every git repo. Know everything.*
 
-### zsh-git-repo-searchDirtyGitRepos
-- search for dirty repos from the cache file which is at:
-```sh
-export ZPWR_ALL_GIT_DIRS="$HOME/.zsh-git-repo-cache"
+---
+
+## // SYSTEM OVERVIEW
+
+A zsh plugin that crawls the root filesystem `/` to locate **every git repository** on your machine and caches the results for instant retrieval. Uses `fd` when available, falls back to `find`. Integrates with [fzf](https://github.com/junegunn/fzf) for interactive selection.
 
 ```
-### zsh-git-repo-searchCleanGitRepos
-- search for clean repos from the cache file which is at:
-```sh
-export ZPWR_ALL_GIT_DIRS="$HOME/.zsh-git-repo-cache"
+[ SCAN ] ──> [ CACHE ] ──> [ QUERY ]
+   │              │              │
+  fd/find     ~/.zsh-git-   fzf / list
+   @ /        repo-cache      output
 ```
 
-### zsh-git-repo-searchDirtyGitReposCache
-- search for dirty repos from a cache file.  Git repo cache file will also be created if does not exist.
-```sh
-export ZPWR_ALL_GIT_DIRS_DIRTY="$HOME/.zsh-git-repo-cache-dirty"
+## // INSTALL
+
+**Zinit:**
+```zsh
+zinit light MenkeTechnologies/zsh-git-repo-cache
 ```
 
-### zsh-git-repo-searchCleanGitReposCache
-- search for clean repos from a cache file.  Git repo cache file will also be created if does not exist.
-```sh
-export ZPWR_ALL_GIT_DIRS_CLEAN="$HOME/.zsh-git-repo-cache-clean"
+**Oh-My-Zsh:**
+```zsh
+git clone https://github.com/MenkeTechnologies/zsh-git-repo-cache \
+    ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-git-repo-cache
 ```
 
-[zpwr](https://github.com/MenkeTechnologies/zpwr) verbs added are:
-```sh
-ZPWR_VERBS[gitreposlist]='zsh-git-repo-searchAllGitRepos n list=search \$ZPWR_ALL_GIT_DIRS'
-ZPWR_VERBS[gitreposcleanlist]='zsh-git-repo-searchCleanGitRepos n list=search clean \$ZPWR_ALL_GIT_DIRS_CLEAN'
-ZPWR_VERBS[gitreposdirtylist]='zsh-git-repo-searchDirtyGitRepos n list =search dirty \$ZPWR_ALL_GIT_DIRS_DIRTY'
-ZPWR_VERBS[gitreposcleancachelist]='zsh-git-repo-searchCleanGitReposCache n list=search clean cached \$ZPWR_ALL_GIT_DIRS_CLEAN'
-ZPWR_VERBS[gitreposdirtycachelist]='zsh-git-repo-searchDirtyGitReposCache n list=search dirty cached \$ZPWR_ALL_GIT_DIRS_DIRTY'
+## // DATA NODES
 
-ZPWR_VERBS[gitrepos]='zsh-git-repo-searchAllGitRepos=search \$ZPWR_ALL_GIT_DIRS in fzf'
-ZPWR_VERBS[gitreposclean]='zsh-git-repo-searchCleanGitRepos=search clean \$ZPWR_ALL_GIT_DIRS_CLEAN in fzf'
-ZPWR_VERBS[gitreposdirty]='zsh-git-repo-searchDirtyGitRepos=search dirty \$ZPWR_ALL_GIT_DIRS_DIRTY in fzf'
-ZPWR_VERBS[gitreposcleancache]='zsh-git-repo-searchCleanGitReposCache=search clean cached \$ZPWR_ALL_GIT_DIRS_CLEAN in fzf'
-ZPWR_VERBS[gitreposdirtycache]='zsh-git-repo-searchDirtyGitReposCache=search dirty cached \$ZPWR_ALL_GIT_DIRS_DIRTY in fzf'
+| Variable | Cache File | Purpose |
+|---|---|---|
+| `ZPWR_ALL_GIT_DIRS` | `~/.zsh-git-repo-cache` | All repos |
+| `ZPWR_ALL_GIT_DIRS_DIRTY` | `~/.zsh-git-repo-cache-dirty` | Dirty repos |
+| `ZPWR_ALL_GIT_DIRS_CLEAN` | `~/.zsh-git-repo-cache-clean` | Clean repos |
+
+## // FUNCTIONS
+
+### `zsh-git-repo-regenAllGitRepos`
+> Scorched earth rescan. Crawls `/` and rebuilds the master cache.
+
+### `zsh-git-repo-regenAllGitReposDirty`
+> Regenerate the dirty repos cache.
+
+### `zsh-git-repo-searchAllGitRepos`
+> Query the cache. Returns all indexed repos.
+
+### `zsh-git-repo-searchDirtyGitRepos`
+> Filter for repos with uncommitted changes -- the ones that need your attention.
+
+### `zsh-git-repo-searchCleanGitRepos`
+> Filter for repos with a clean working tree.
+
+### `zsh-git-repo-searchDirtyGitReposCache`
+> Search dirty repos from a dedicated cache file. Auto-generates the cache if it doesn't exist.
+
+### `zsh-git-repo-searchCleanGitReposCache`
+> Search clean repos from a dedicated cache file. Auto-generates the cache if it doesn't exist.
+
+## // ZPWR INTERFACE
+
+When running inside [zpwr](https://github.com/MenkeTechnologies/zpwr), the following verbs are jacked in:
+
+```
+VERB                      ACTION
+────────────────────────  ──────────────────────────────────
+gitreposlist              list all repos
+gitreposcleanlist         list clean repos
+gitreposdirtylist         list dirty repos
+gitreposcleancachelist    list clean repos (cached)
+gitreposdirtycachelist    list dirty repos (cached)
+gitrepos                  search all repos in fzf
+gitreposclean             search clean repos in fzf
+gitreposdirty             search dirty repos in fzf
+gitreposcleancache        search clean repos in fzf (cached)
+gitreposdirtycache        search dirty repos in fzf (cached)
 ```
 
-# created by MenkeTechnologies
+## // SIGNAL
+
+```
+created by MenkeTechnologies
+```
+
+---
