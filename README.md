@@ -1,5 +1,7 @@
 # zsh-git-repo-cache
 
+[![CI](https://github.com/MenkeTechnologies/zsh-git-repo-cache/actions/workflows/ci.yml/badge.svg)](https://github.com/MenkeTechnologies/zsh-git-repo-cache/actions/workflows/ci.yml)
+
 ```
  ██████╗ ██╗████████╗    ██████╗ ███████╗██████╗  ██████╗
 ██╔════╝ ██║╚══██╔══╝    ██╔══██╗██╔════╝██╔══██╗██╔═══██╗
