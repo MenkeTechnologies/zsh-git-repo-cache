@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="zsh-git-repo-cache — crawls / to locate every git repo on the machine and caches results for instant retrieval. Uses fd when available, falls back to find. fzf-driven interactive selection.">
+  <title>zsh-git-repo-cache — Documentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&amp;family=Share+Tech+Mono&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="hud-static.css">
+  <link rel="stylesheet" href="tutorial.css">
+  <style>
+    .tutorial-main { max-width: 68rem; }
+    .docs-build-line { margin: 0.35rem 0 0; font-family: 'Share Tech Mono', ui-monospace, monospace; font-size: 11px; color: var(--text-dim); letter-spacing: 0.03em; max-width: 42rem; opacity: 0.75; }
+    .hub-scheme-strip { border-bottom: 1px dashed var(--border); background: color-mix(in srgb, var(--bg-secondary) 85%, transparent); padding: 0.55rem 1.5rem 0.65rem; position: relative; }
+    .hub-scheme-strip-inner { max-width: 68rem; margin: 0 auto; display: flex; align-items: center; gap: 0.85rem; }
+    .hub-scheme-strip .hud-scheme-label { flex: 0 0 auto; font-family: 'Orbitron', sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); text-align: left; }
+    .hub-scheme-strip .scheme-grid { flex: 1 1 auto; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+    @media (max-width: 720px) { .hub-scheme-strip-inner { flex-direction: column; align-items: stretch; } .hub-scheme-strip .scheme-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .example-tbl { width: 100%; border-collapse: collapse; margin: 0.6rem 0; font-size: 12.5px; }
+    .example-tbl td { padding: 6px 10px; border: 1px solid var(--border); vertical-align: top; color: var(--text-dim); }
+    .example-tbl td:first-child { width: 40%; color: var(--cyan); font-family: 'Share Tech Mono', monospace; }
+    .example-tbl td code { color: var(--accent-light); background: var(--bg); padding: 1px 5px; font-size: 12px; }
+    .sibling-list { columns: 2; column-gap: 1.5rem; padding-left: 1.1rem; }
+    .sibling-list li { break-inside: avoid; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <div class="app tutorial-app" id="docsApp">
+    <div class="crt-scanline" id="crtH" aria-hidden="true"></div>
+    <div class="crt-scanline-v" id="crtV" aria-hidden="true"></div>
+
+    <header class="tutorial-header">
+      <div class="tutorial-header-inner">
+        <div>
+          <h1 class="tutorial-brand">// ZSH-GIT-REPO-CACHE &mdash; INDEX EVERY GIT REPO ON THE MACHINE // FAST cd, FAST PROMPT</h1>
+          <nav class="tutorial-crumbs" aria-label="Breadcrumb">
+            <span class="current">Docs</span>
+            <span class="sep">/</span>
+            <a href="https://github.com/MenkeTechnologies/zsh-git-repo-cache" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <span class="sep">/</span>
+            <a href="https://github.com/MenkeTechnologies/zpwr" target="_blank" rel="noopener noreferrer">zpwr</a>
+            <span class="sep">/</span>
+            <a href="https://github.com/MenkeTechnologies/MenkeTechnologiesMeta" target="_blank" rel="noopener noreferrer">Meta</a>
+          </nav>
+          <p class="docs-build-line">zsh plugin · crawls <code>/</code> with <code>fd</code> (or <code>find</code>) · caches all repos / dirty / clean · fzf-driven interactive selection</p>
+        </div>
+        <div class="tutorial-toolbar">
+          <button type="button" class="btn btn-secondary" id="btnTheme" title="Toggle light/dark">Theme</button>
+          <button type="button" class="btn btn-secondary active" id="btnCrt" title="CRT scanline overlay">CRT</button>
+          <button type="button" class="btn btn-secondary active" id="btnNeon" title="Neon border pulse">Neon</button>
+          <a class="btn btn-secondary" href="https://github.com/MenkeTechnologies/zsh-git-repo-cache" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <a class="btn btn-secondary" href="https://github.com/MenkeTechnologies/zsh-git-repo-cache/issues" target="_blank" rel="noopener noreferrer">Issues</a>
+        </div>
+      </div>
+    </header>
+
+    <div class="hub-scheme-strip">
+      <div class="hub-scheme-strip-inner">
+        <span class="hud-scheme-label">// Color scheme</span>
+        <div class="scheme-grid" id="hudSchemeGrid"></div>
+      </div>
+    </div>
+
+    <main class="tutorial-main">
+      <h2 class="tutorial-title"><span class="step-hash">&gt;_</span>ZSH-GIT-REPO-CACHE</h2>
+      <p class="tutorial-subtitle"><strong>Every git repo on disk, instantly searchable.</strong> Crawls the root filesystem to locate every git repository and caches results for instant retrieval. Uses <code>fd</code> when available, falls back to <code>find</code>. Integrates with <a href="https://github.com/junegunn/fzf">fzf</a> for interactive selection.</p>
+
+      <section class="tutorial-section">
+        <h2>Install</h2>
+<pre># Zinit
+zinit light MenkeTechnologies/zsh-git-repo-cache
+
+# Oh My Zsh
+git clone https://github.com/MenkeTechnologies/zsh-git-repo-cache \
+    "${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-git-repo-cache"
+# then: plugins+=(zsh-git-repo-cache)
+
+# Manual
+git clone https://github.com/MenkeTechnologies/zsh-git-repo-cache
+source zsh-git-repo-cache/zsh-git-repo-cache.plugin.zsh</pre>
+      </section>
+
+      <section class="tutorial-section">
+        <h2>Data nodes</h2>
+        <table class="example-tbl">
+          <tbody>
+            <tr><td><code>ZPWR_ALL_GIT_DIRS</code></td><td><code>~/.zsh-git-repo-cache</code> &mdash; all repos</td></tr>
+            <tr><td><code>ZPWR_ALL_GIT_DIRS_DIRTY</code></td><td><code>~/.zsh-git-repo-cache-dirty</code> &mdash; dirty repos</td></tr>
+            <tr><td><code>ZPWR_ALL_GIT_DIRS_CLEAN</code></td><td><code>~/.zsh-git-repo-cache-clean</code> &mdash; clean repos</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="tutorial-section">
+        <h2>Functions</h2>
+        <table class="example-tbl">
+          <tbody>
+            <tr><td><code>zsh-git-repo-regenAllGitRepos</code></td><td>scorched-earth rescan of <code>/</code></td></tr>
+            <tr><td><code>zsh-git-repo-regenAllGitReposDirty</code></td><td>rebuild dirty cache</td></tr>
+            <tr><td><code>zsh-git-repo-searchAllGitRepos</code></td><td>query all indexed repos</td></tr>
+            <tr><td><code>zsh-git-repo-searchDirtyGitRepos</code></td><td>only repos with uncommitted changes</td></tr>
+            <tr><td><code>zsh-git-repo-searchCleanGitRepos</code></td><td>only clean working trees</td></tr>
+            <tr><td><code>zsh-git-repo-search{Dirty,Clean}GitReposCache</code></td><td>cached variants &mdash; auto-generate if missing</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="tutorial-section">
+        <h2>zpwr verbs</h2>
+        <p>When running inside <a href="https://github.com/MenkeTechnologies/zpwr">zpwr</a>:</p>
+<pre>gitreposlist              list all repos
+gitreposcleanlist         list clean repos
+gitreposdirtylist         list dirty repos
+gitreposcleancachelist    list clean repos (cached)
+gitreposdirtycachelist    list dirty repos (cached)
+gitrepos                  search all repos in fzf
+gitreposclean             search clean repos in fzf
+gitreposdirty             search dirty repos in fzf
+gitreposcleancache        search clean repos in fzf (cached)
+gitreposdirtycache        search dirty repos in fzf (cached)</pre>
+      </section>
+
+      <section class="tutorial-section">
+        <h2>Sibling plugins</h2>
+        <p>Part of the MenkeTechnologies zsh plugin family &mdash; the <a href="https://github.com/MenkeTechnologies/MenkeTechnologiesMeta">MenkeTechnologiesMeta</a> umbrella:</p>
+        <ul class="sibling-list">
+          <li><a href="https://github.com/MenkeTechnologies/zsh-better-npm-completion">zsh-better-npm-completion</a> &mdash; cache-aware <code>npm install</code> completion</li>
+          <li><a href="https://github.com/MenkeTechnologies/zsh-cargo-completion">zsh-cargo-completion</a> &mdash; live <code>cargo add</code> / <code>cargo install</code> completion</li>
+          <li><a href="https://github.com/MenkeTechnologies/zsh-cpan-completion">zsh-cpan-completion</a> &mdash; live MetaCPAN <code>cpan</code> / <code>cpanm</code> completion</li>
+          <li><a href="https://github.com/MenkeTechnologies/zsh-dotnet-completion">zsh-dotnet-completion</a> &mdash; dotnet CLI completion</li>
+          <li><a href="https://github.com/MenkeTechnologies/zsh-expand">zsh-expand</a> &mdash; spacebar expansion (11,683 tests)</li>
+          <li><a href="https://github.com/MenkeTechnologies/zsh-gem-completion">zsh-gem-completion</a> &mdash; ruby <code>gem install</code> remote completion</li>
+          <li><a href="https://github.com/MenkeTechnologies/zsh-git-acp">zsh-git-acp</a> &mdash; 159 git aliases + add/commit/push keybindings</li>
+          <li><a href="https://github.com/MenkeTechnologies/zsh-learn">zsh-learn</a> &mdash; MySQL-backed learning collection / quiz</li>
+          <li><a href="https://github.com/MenkeTechnologies/zsh-more-completions">zsh-more-completions</a> &mdash; 27,790-file mega completion corpus</li>
+          <li><a href="https://github.com/MenkeTechnologies/zsh-nginx">zsh-nginx</a> &mdash; nginx commands + service-wrapper aliases</li>
+          <li><a href="https://github.com/MenkeTechnologies/zsh-pip-description-completion">zsh-pip-description-completion</a> &mdash; pip remote completion with descriptions</li>
+          <li><a href="https://github.com/MenkeTechnologies/zsh-sed-sub">zsh-sed-sub</a> &mdash; in-place sed substitution on the command line</li>
+          <li><a href="https://github.com/MenkeTechnologies/zsh-sudo">zsh-sudo</a> &mdash; ESC ESC to prepend sudo</li>
+          <li><a href="https://github.com/MenkeTechnologies/zsh-xcode-completions">zsh-xcode-completions</a> &mdash; xcodebuild / xcrun / swift completion</li>
+        </ul>
+      </section>
+
+    </main>
+  </div>
+  <script src="hud-theme.js"></script>
+</body>
+</html>
