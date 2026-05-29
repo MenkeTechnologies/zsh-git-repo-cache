@@ -54,22 +54,13 @@
     assert "$out" same_as '/custom/tmp/.zsh-git-repo-temp'
 }
 
-@test 'BUG-PIN: ZPWR_ALL_GIT_DIRS_DIRTY block clobbers ZPWR_ALL_GIT_DIRS to literal _DIRTY-prefix' {
-    # Pin (current buggy behavior at line 9 of the plugin):
-    #   if [[ -z "$ZPWR_ALL_GIT_DIRS_DIRTY" ]]; then
-    #       export ZPWR_ALL_GIT_DIRS=_DIRTY"$HOME/..."
-    #   fi
-    # Note the LHS is ZPWR_ALL_GIT_DIRS (not ZPWR_ALL_GIT_DIRS_DIRTY),
-    # AND there is an unquoted `_DIRTY` literal prefix smuggled in.
-    # This test pins the current behavior so the fix lands deliberately.
+@test 'ZPWR_ALL_GIT_DIRS_DIRTY defaults to $HOME/.zsh-git-repo-cache-dirty when unset' {
     local out
-    out=$(unset ZPWR_ALL_GIT_DIRS ZPWR_ALL_GIT_DIRS_DIRTY; HOME=/tmp/fakehome zsh -c "
+    out=$(unset ZPWR_ALL_GIT_DIRS_DIRTY; HOME=/tmp/fakehome zsh -c "
         source '$pluginFile' 2>/dev/null
-        print \"\$ZPWR_ALL_GIT_DIRS\"
+        print \"\$ZPWR_ALL_GIT_DIRS_DIRTY\"
     ")
-    # Line 5 sets ZPWR_ALL_GIT_DIRS=/tmp/fakehome/.zsh-git-repo-cache,
-    # then line 9 overwrites it with _DIRTY/tmp/fakehome/.zsh-git-repo-cache-dirty.
-    assert "$out" same_as '_DIRTY/tmp/fakehome/.zsh-git-repo-cache-dirty'
+    assert "$out" same_as '/tmp/fakehome/.zsh-git-repo-cache-dirty'
 }
 
 @test 'fallback zpwrExists fn is defined when caller does not provide it' {

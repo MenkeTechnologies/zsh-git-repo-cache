@@ -6,7 +6,7 @@ if [[ -z "$ZPWR_ALL_GIT_DIRS" ]]; then
 fi
 
 if [[ -z "$ZPWR_ALL_GIT_DIRS_DIRTY" ]]; then
-    export ZPWR_ALL_GIT_DIRS=_DIRTY"$HOME/.zsh-git-repo-cache-dirty"
+    export ZPWR_ALL_GIT_DIRS_DIRTY="$HOME/.zsh-git-repo-cache-dirty"
 fi
 
 if [[ -z "$ZPWR_ALL_GIT_DIRS_CLEAN" ]]; then
