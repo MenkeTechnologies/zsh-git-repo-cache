@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="zsh-git-repo-cache — Engineering report. Plugin that indexes every git repo on disk (fd/find) into 3 cache files (all / dirty / clean), surfaced through 7 autoload functions and 10 ZPWR_VERBS dispatch entries. 8 autoload fns, 287 LOC, 29 zunit @test cases pinning entrypoint, ZPWR_VERBS schema, autoload coverage, and zsh -n parse.">
+  <title>zsh-git-repo-cache &mdash; Engineering Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&amp;family=Share+Tech+Mono&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="hud-static.css">
+  <link rel="stylesheet" href="tutorial.css">
+  <style>
+    .tutorial-main { max-width: 72rem; }
+    .bar-wrap { background:var(--bg-primary);border:1px solid var(--border);border-radius:2px;height:18px;position:relative;overflow:hidden; }
+    .bar-fill { height:100%;border-radius:1px;transition:width 1.2s cubic-bezier(.22,1,.36,1); }
+    .bar-fill.green  { background:linear-gradient(90deg,#39ff14,#20c00a);box-shadow:0 0 8px rgba(57,255,20,.4); }
+    .bar-fill.cyan   { background:linear-gradient(90deg,#05d9e8,#0891b2);box-shadow:0 0 8px rgba(5,217,232,.4); }
+    .bar-fill.yellow { background:linear-gradient(90deg,#ffb800,#e8a000);box-shadow:0 0 8px rgba(255,184,0,.35); }
+    .bar-fill.magenta{ background:linear-gradient(90deg,#d300c5,#a000a0);box-shadow:0 0 8px rgba(211,0,197,.35); }
+    .bar-pct { position:absolute;right:6px;top:0;line-height:18px;font-size:10px;font-weight:700;color:#fff;text-shadow:0 0 4px #000;font-family:'Orbitron',sans-serif; }
+    .file-table { width:100%;border-collapse:collapse;margin:0.6rem 0;font-size:12px; }
+    .file-table th { background:var(--bg-secondary);color:var(--cyan);font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;text-align:left;padding:7px 10px;border:1px solid var(--border); }
+    .file-table td { padding:6px 10px;border:1px solid var(--border);color:var(--text-dim);vertical-align:middle; }
+    .file-table tr:hover td { background:var(--bg-hover); }
+    .file-table td:first-child { font-family:'Share Tech Mono',monospace;color:var(--accent-light);font-weight:600;white-space:nowrap; }
+    .file-table .num { text-align:right;font-family:'Share Tech Mono',monospace; }
+    .file-table .total-row td { background:var(--bg-secondary);font-weight:700;color:var(--text);border-top:2px solid var(--cyan); }
+    .file-table code { font-size:11px;color:var(--accent-light);background:var(--bg-primary);padding:1px 4px;border-radius:2px; }
+    .stat-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(13rem,1fr));gap:0.75rem;margin:1.2rem 0; }
+    .stat-card { border:1px solid var(--border);border-top:3px solid var(--cyan);background:var(--bg-card);padding:1rem 1.2rem;border-radius:2px;text-align:center; }
+    .stat-card .stat-val { font-family:'Orbitron',sans-serif;font-size:26px;font-weight:900;color:var(--cyan);line-height:1.1;text-shadow:0 0 20px var(--cyan-glow); }
+    .stat-card .stat-val.accent { color:var(--accent);text-shadow:0 0 20px var(--accent-glow); }
+    .stat-card .stat-val.green  { color:var(--green);text-shadow:0 0 20px rgba(57,255,20,.3); }
+    .stat-card .stat-label { font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-top:0.5rem; }
+    @keyframes glow-pulse { 0%,100%{text-shadow:0 0 20px var(--cyan-glow)}50%{text-shadow:0 0 40px var(--cyan-glow),0 0 80px var(--cyan-dim)} }
+    .stat-card .stat-val { animation:glow-pulse 3s ease-in-out infinite; }
+    .mapping-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(20rem,1fr));gap:0.65rem;margin:0.8rem 0; }
+    .mapping-card { border:1px solid var(--border);border-left:3px solid var(--magenta);background:var(--bg-card);padding:0.6rem 0.9rem;border-radius:2px; }
+    .mapping-card h4 { font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--magenta);margin:0 0 0.3rem; }
+    .mapping-card p { margin:0;font-size:11px;color:var(--text-dim);line-height:1.5; }
+    .mapping-card code { font-size:10.5px;color:var(--accent-light);background:var(--bg-primary);padding:1px 4px;border-radius:2px; }
+    .section-rule { border:none;border-top:1px dashed var(--border);margin:2rem 0; }
+    .feature-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(22rem,1fr));gap:0.65rem;margin:0.8rem 0; }
+    .feature-card { border:1px solid var(--border);border-left:3px solid var(--cyan);background:var(--bg-card);padding:0.7rem 1rem;border-radius:2px; }
+    .feature-card h4 { font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);margin:0 0 0.3rem; }
+    .feature-card p { margin:0;font-size:11px;color:var(--text-dim);line-height:1.55; }
+    .feature-card code { font-size:10.5px;color:var(--accent-light);background:var(--bg-primary);padding:1px 4px;border-radius:2px; }
+  </style>
+</head>
+<body>
+  <div class="app tutorial-app" id="reportApp">
+    <div class="crt-scanline" id="crtH" aria-hidden="true"></div>
+    <div class="crt-scanline-v" id="crtV" aria-hidden="true"></div>
+
+    <header class="tutorial-header">
+      <div class="tutorial-header-inner">
+        <div>
+          <h1 class="tutorial-brand">// ZSH-GIT-REPO-CACHE &mdash; ENGINEERING REPORT</h1>
+          <nav class="tutorial-crumbs" aria-label="Breadcrumb">
+            <span class="current">Engineering Report</span>
+            <span class="sep">/</span>
+            <a href="index.html">Docs</a>
+            <span class="sep">/</span>
+            <a href="https://github.com/MenkeTechnologies/zsh-git-repo-cache" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <span class="sep">/</span>
+            <a href="https://github.com/MenkeTechnologies/zpwr" target="_blank" rel="noopener noreferrer">zpwr</a>
+          </nav>
+          <p style="margin:0.35rem 0 0;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:0.03em;opacity:0.75;">
+            zsh plugin &middot; indexes every git repo on disk &middot; fd-or-find crawl &middot; 3 cache files (all / dirty / clean) &middot; fzf interactive selection &middot; 10 ZPWR verbs
+          </p>
+        </div>
+        <div class="tutorial-toolbar">
+          <button type="button" class="btn btn-secondary" id="btnTheme" title="Toggle light/dark">Theme</button>
+          <button type="button" class="btn btn-secondary active" id="btnCrt" title="CRT scanline overlay">CRT</button>
+          <button type="button" class="btn btn-secondary active" id="btnNeon" title="Neon border pulse">Neon</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="tutorial-main">
+
+      <!-- ═══════════════════════════════════════ -->
+      <!-- SECTION 1: EXECUTIVE SUMMARY           -->
+      <!-- ═══════════════════════════════════════ -->
+      <h2 class="tutorial-title"><span class="step-hash">&gt;_</span>EXECUTIVE SUMMARY</h2>
+      <p class="tutorial-subtitle">zsh-git-repo-cache is the indexing layer for "every git repo on the machine". The plugin crawls the root filesystem once with <code>fd</code> (or falls back to <code>find</code>), strips trailing <code>/.git</code>, removes macOS <code>/System/Volumes</code> read-only mirror prefixes, and writes the deduped, sorted list to <code>$ZPWR_ALL_GIT_DIRS</code>. A second pass walks each path with <code>git diff-index --quiet HEAD</code> + <code>git ls-files --exclude-standard --others</code> and bisects the master list into a dirty and clean cache. All queries &mdash; live and cache-backed, list and fzf-interactive &mdash; are 6 thin shims over those three files. The plugin is the upstream feeder for <code>cd</code>-like fzf workflows in <code>zpwr</code>; its job is to make the master list cheap enough that the prompt can read it on every command.</p>
+
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-val">287</div><div class="stat-label">Plugin LOC</div></div>
+        <div class="stat-card"><div class="stat-val accent">8</div><div class="stat-label">Autoload Fns</div></div>
+        <div class="stat-card"><div class="stat-val">3</div><div class="stat-label">Cache Files</div></div>
+        <div class="stat-card"><div class="stat-val">10</div><div class="stat-label">ZPWR Verbs</div></div>
+        <div class="stat-card"><div class="stat-val green">29</div><div class="stat-label">zunit @test Cases</div></div>
+        <div class="stat-card"><div class="stat-val">6</div><div class="stat-label">Test Files</div></div>
+        <div class="stat-card"><div class="stat-val">21</div><div class="stat-label">Docs/Repo Gates</div></div>
+        <div class="stat-card"><div class="stat-val">42</div><div class="stat-label">Git Commits</div></div>
+      </div>
+
+      <div style="margin:1.2rem 0;">
+        <p style="font-size:11px;color:var(--text-muted);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:4px;font-family:'Orbitron',sans-serif;font-weight:700;">Plugin Source &mdash; 287 LOC</p>
+        <div class="bar-wrap" style="height:24px;">
+          <div class="bar-fill cyan" style="width:80.8%;"></div>
+          <span class="bar-pct" style="font-size:12px;">232 autoload / 55 plugin entrypoint &middot; 80.8% autoload</span>
+        </div>
+        <p style="font-size:10px;color:var(--text-muted);margin-top:4px;">Entrypoint (<code>zsh-git-repo-cache.plugin.zsh</code>, 55 LOC) only sets default env vars, defines a fallback <code>zpwrExists</code> + <code>zpwrPrettyPrint</code>, appends <code>autoload/</code> to <code>fpath</code>, autoloads every fn, and registers 10 <code>ZPWR_VERBS</code> when running under zpwr. All real work lives in the 8 autoload functions (232 LOC) lazy-loaded by zsh's <code>autoload -Uz</code>.</p>
+      </div>
+
+      <hr class="section-rule">
+
+      <!-- ═══════════════════════════════════════ -->
+      <!-- SECTION 2: FILE STRUCTURE              -->
+      <!-- ═══════════════════════════════════════ -->
+      <h2 class="tutorial-title"><span class="step-hash">#</span>FILE STRUCTURE</h2>
+      <p class="tutorial-subtitle">Every autoload file follows the canonical zsh-plugin pattern: <code># -*- mode: sh -*-</code> + <code>function name(){...}</code> + a trailing self-call so the file is also <code>source</code>-able as a script. Stems match function names, so <code>fpath</code> autoload + direct <code>source</code> both resolve identically.</p>
+
+      <table class="file-table">
+        <thead><tr><th>File</th><th class="num">Lines</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td>zsh-git-repo-cache.plugin.zsh</td><td class="num">55</td><td>Plugin entrypoint: default env, fallback <code>zpwrExists</code>/<code>zpwrPrettyPrint</code>, <code>fpath</code> append, <code>autoload -Uz</code>, ZPWR_VERBS registration</td></tr>
+          <tr><td>autoload/zsh-git-repo-searchDirtyGitRepos</td><td class="num">58</td><td>Live walk: <code>git diff-index --quiet HEAD</code> + <code>git ls-files --exclude-standard --others</code> per path; emits dirty paths; fzf or list mode</td></tr>
+          <tr><td>autoload/zsh-git-repo-searchCleanGitRepos</td><td class="num">55</td><td>Live walk: complement of the above; emits paths with no staged diff and no untracked files</td></tr>
+          <tr><td>autoload/zsh-git-repo-regenAllGitReposDirty</td><td class="num">35</td><td>Bisect master cache into dirty + clean caches in a single pass via <code>exec 3&gt;</code> + <code>exec 4&gt;</code></td></tr>
+          <tr><td>autoload/zsh-git-repo-searchAllGitRepos</td><td class="num">34</td><td>Cache-backed query: regenerate if missing/empty, then list or fzf-pick</td></tr>
+          <tr><td>autoload/zsh-git-repo-searchCleanGitReposCache</td><td class="num">34</td><td>Cache-backed clean query: regenerates dirty/clean caches if either is missing/empty</td></tr>
+          <tr><td>autoload/zsh-git-repo-searchDirtyGitReposCache</td><td class="num">34</td><td>Cache-backed dirty query: same regen-on-empty contract as the clean variant</td></tr>
+          <tr><td>autoload/zsh-git-repo-regenAllGitRepos</td><td class="num">25</td><td>Scorched-earth rescan: <code>fd '\.git$' /</code> (or <code>find / -name .git -type d -prune</code>), strip trailing <code>/.git</code>, strip macOS <code>/System/Volumes</code> mirror prefixes, sort + uniq</td></tr>
+          <tr><td>autoload/zsh-git-repo-searchGitCommon</td><td class="num">12</td><td>Shared tail: capture <code>zsh-git-repo-goThere</code> output, echo it for transparency, eval to actually <code>cd</code></td></tr>
+        </tbody>
+        <tfoot><tr class="total-row"><td>9 source files</td><td class="num">287</td><td>1 entrypoint + 8 autoload fns</td></tr></tfoot>
+      </table>
+
+      <hr class="section-rule">
+
+      <!-- ═══════════════════════════════════════ -->
+      <!-- SECTION 3: DATA MODEL                  -->
+      <!-- ═══════════════════════════════════════ -->
+      <h2 class="tutorial-title"><span class="step-hash">$</span>DATA MODEL</h2>
+      <p class="tutorial-subtitle">Three plain-text caches under <code>$HOME</code>, one path per line, sorted + deduped. No SQLite, no LMDB, no on-disk format version &mdash; the file format is "newline-separated absolute paths." Reading is <code>cat</code> + <code>fzf</code>; writing is <code>sort | uniq</code>. The format choice is load-bearing for the prompt-read use case: <code>read -t0</code> against a flat file is the fastest possible "is this repo dirty?" answer.</p>
+
+      <table class="file-table">
+        <thead><tr><th>Env var</th><th>Default path</th><th>Producer</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>ZPWR_ALL_GIT_DIRS</td><td><code>~/.zsh-git-repo-cache</code></td><td><code>regenAllGitRepos</code></td><td>Master list of every git repo on disk</td></tr>
+          <tr><td>ZPWR_ALL_GIT_DIRS_DIRTY</td><td><code>~/.zsh-git-repo-cache-dirty</code></td><td><code>regenAllGitReposDirty</code></td><td>Repos with uncommitted changes or untracked files</td></tr>
+          <tr><td>ZPWR_ALL_GIT_DIRS_CLEAN</td><td><code>~/.zsh-git-repo-cache-clean</code></td><td><code>regenAllGitReposDirty</code></td><td>Repos with no staged diff and no untracked files</td></tr>
+          <tr><td>ZPWR_TEMPFILE3</td><td><code>$TMPDIR/.zsh-git-repo-temp</code></td><td><code>regenAllGitRepos</code></td><td>Scratch buffer for inline <code>perl -i -pe</code> edits before sort+uniq</td></tr>
+          <tr><td>ZPWR_FZF</td><td><code>fzf</code></td><td>plugin entrypoint</td><td>Fzf invocation name (override for custom wrappers)</td></tr>
+        </tbody>
+      </table>
+
+      <hr class="section-rule">
+
+      <!-- ═══════════════════════════════════════ -->
+      <!-- SECTION 4: SCAN PIPELINE                -->
+      <!-- ═══════════════════════════════════════ -->
+      <h2 class="tutorial-title"><span class="step-hash">@</span>SCAN PIPELINE</h2>
+      <p class="tutorial-subtitle">A single <code>regenAllGitRepos</code> invocation produces a fully normalized master list. Two-tool dispatch (<code>fd</code> when available, <code>find</code> as fallback) means the plugin works on a fresh box and gets the 8-thread <code>fd</code> speedup on developer machines. Two <code>perl -i -pe</code> passes strip trailing <code>/.git</code> and (on macOS) the read-only Apple-mounted mirror prefixes that would otherwise produce a 2x-duplicated list.</p>
+
+      <pre style="margin:0.5rem 0;padding:1rem;border:1px solid var(--border);background:var(--bg-primary);color:var(--text-dim);font-size:11px;line-height:1.7;overflow-x:auto;">
+  /                                                  ZPWR_ALL_GIT_DIRS
+   │                                                       ▲
+   │ sudo fd '\.git$' / --type d --threads=8                │ sort | uniq
+   │   --hidden --no-ignore        (or)  sudo find /        │
+   ▼                              -name .git -type d -prune │
+  ┌──────────────────────┐                                  │
+  │ raw .git path stream │                                  │
+  └─────────┬────────────┘                                  │
+            │ perl -ne 'print "$1\n" if m{(/.*.git)/*$}'    │
+            ▼                                                │
+  ┌──────────────────────┐                                  │
+  │ ZPWR_TEMPFILE3       │                                  │
+  └─────────┬────────────┘                                  │
+            │ perl -i -pe 's@/.git$@@'                       │
+            │ perl -i -pe 's@^/System/Volumes/Data@@'       │ (macOS)
+            │ perl -i -pe 's@^/System/Volumes/Update/mnt1@@'│ (macOS)
+            ▼                                                │
+  ┌──────────────────────┐                                  │
+  │ normalized repo dirs │──────────────────────────────────┘
+  └──────────────────────┘
+            │
+            │ regenAllGitReposDirty: walk + git diff-index --quiet HEAD
+            │                       + git ls-files --exclude-standard --others
+            ▼
+  ┌──────────────────────┐    ┌──────────────────────┐
+  │ ZPWR_ALL_GIT_DIRS_   │    │ ZPWR_ALL_GIT_DIRS_   │
+  │ DIRTY (exec 3&gt;)      │    │ CLEAN (exec 4&gt;)      │
+  └──────────────────────┘    └──────────────────────┘</pre>
+
+      <p style="font-size:11px;color:var(--text-muted);margin-top:0.5rem;">The dirty/clean bisection writes to both files concurrently via two long-lived file descriptors (<code>exec 3&gt;</code>, <code>exec 4&gt;</code>) so a single <code>while read</code> loop over the master list produces both caches in one pass. Branch order matters: <code>git diff-index --quiet HEAD</code> first (cheapest, no I/O when clean), then <code>git ls-files --exclude-standard --others</code> only on the clean side to catch repos that have untracked files but no staged delta. Worktree is saved/restored via <code>origPwd="$PWD"</code> + <code>builtin cd -q "$origPwd"</code> at the end &mdash; the function is reentrant and won't poison the caller's CWD even on error.</p>
+
+      <hr class="section-rule">
+
+      <!-- ═══════════════════════════════════════ -->
+      <!-- SECTION 5: QUERY SURFACE               -->
+      <!-- ═══════════════════════════════════════ -->
+      <h2 class="tutorial-title"><span class="step-hash">&amp;</span>QUERY SURFACE</h2>
+      <p class="tutorial-subtitle">Two axes of query: <strong>live</strong> (walk master list, ask git fresh) vs <strong>cached</strong> (read pre-computed dirty/clean files), and <strong>list</strong> (stdout) vs <strong>fzf</strong> (interactive). Six query functions + 1 shared tail = full matrix. The cached path is the prompt-friendly one (no fork-per-repo); the live path is the up-to-the-second one (no stale-cache risk).</p>
+
+      <table class="file-table">
+        <thead><tr><th>Function</th><th>Mode</th><th>Source</th><th>Output</th></tr></thead>
+        <tbody>
+          <tr><td>searchAllGitRepos</td><td>cache</td><td><code>$ZPWR_ALL_GIT_DIRS</code></td><td>all repos (list or fzf)</td></tr>
+          <tr><td>searchDirtyGitRepos</td><td>live</td><td>walk master + git probe</td><td>dirty repos right now</td></tr>
+          <tr><td>searchCleanGitRepos</td><td>live</td><td>walk master + git probe</td><td>clean repos right now</td></tr>
+          <tr><td>searchDirtyGitReposCache</td><td>cache</td><td><code>$ZPWR_ALL_GIT_DIRS_DIRTY</code></td><td>dirty repos as of last bisect</td></tr>
+          <tr><td>searchCleanGitReposCache</td><td>cache</td><td><code>$ZPWR_ALL_GIT_DIRS_CLEAN</code></td><td>clean repos as of last bisect</td></tr>
+          <tr><td>searchGitCommon</td><td>tail</td><td>shared exec for the 5 fns above</td><td>echoes the <code>cd</code> command, then evals</td></tr>
+          <tr><td>regenAllGitRepos</td><td>rebuild</td><td><code>fd</code> or <code>find</code></td><td>master cache</td></tr>
+          <tr><td>regenAllGitReposDirty</td><td>rebuild</td><td>walk master + git probe</td><td>dirty + clean caches in one pass</td></tr>
+        </tbody>
+      </table>
+
+      <p style="font-size:11px;color:var(--text-muted);margin-top:0.5rem;">Each query fn defines two inner closures &mdash; <code>zsh-git-repo-goThere</code> (pipe through fzf, materialize a <code>cd "..."</code> command) and <code>zsh-git-repo-listThere</code> (raw stdout). The dispatch is one <code>if [[ $cmd == list ]]</code> guard; the regen guard (<code>shouldRegen == regen</code> OR cache missing OR cache empty) is identical across all 5 search variants so adding a new cache type is a copy-paste-rename, not a redesign.</p>
+
+      <hr class="section-rule">
+
+      <!-- ═══════════════════════════════════════ -->
+      <!-- SECTION 6: ZPWR VERB BINDINGS          -->
+      <!-- ═══════════════════════════════════════ -->
+      <h2 class="tutorial-title"><span class="step-hash">~</span>ZPWR VERB BINDINGS</h2>
+      <p class="tutorial-subtitle">When the plugin loads inside zpwr (<code>(( ${+ZPWR_VERBS} ))</code> guard), it registers 10 verbs into the global <code>ZPWR_VERBS</code> hash: 5 list-mode + 5 fzf-mode, full cross product of (all / clean / dirty / clean-cached / dirty-cached). Each value is the function name to run plus a free-text help line zpwr surfaces in its help screen.</p>
+
+      <div class="mapping-grid">
+        <div class="mapping-card"><h4>gitreposlist</h4><p><code>zsh-git-repo-searchAllGitRepos n list</code> &mdash; emit all repos to stdout</p></div>
+        <div class="mapping-card"><h4>gitreposcleanlist</h4><p><code>zsh-git-repo-searchCleanGitRepos n list</code> &mdash; live-walk clean repos to stdout</p></div>
+        <div class="mapping-card"><h4>gitreposdirtylist</h4><p><code>zsh-git-repo-searchDirtyGitRepos n list</code> &mdash; live-walk dirty repos to stdout</p></div>
+        <div class="mapping-card"><h4>gitreposcleancachelist</h4><p><code>zsh-git-repo-searchCleanGitReposCache n list</code> &mdash; clean cache to stdout</p></div>
+        <div class="mapping-card"><h4>gitreposdirtycachelist</h4><p><code>zsh-git-repo-searchDirtyGitReposCache n list</code> &mdash; dirty cache to stdout</p></div>
+        <div class="mapping-card"><h4>gitrepos</h4><p><code>zsh-git-repo-searchAllGitRepos</code> &mdash; fzf-pick + <code>cd</code></p></div>
+        <div class="mapping-card"><h4>gitreposclean</h4><p><code>zsh-git-repo-searchCleanGitRepos</code> &mdash; fzf-pick live clean repos</p></div>
+        <div class="mapping-card"><h4>gitreposdirty</h4><p><code>zsh-git-repo-searchDirtyGitRepos</code> &mdash; fzf-pick live dirty repos</p></div>
+        <div class="mapping-card"><h4>gitreposcleancache</h4><p><code>zsh-git-repo-searchCleanGitReposCache</code> &mdash; fzf-pick cached clean repos</p></div>
+        <div class="mapping-card"><h4>gitreposdirtycache</h4><p><code>zsh-git-repo-searchDirtyGitReposCache</code> &mdash; fzf-pick cached dirty repos</p></div>
+      </div>
+
+      <hr class="section-rule">
+
+      <!-- ═══════════════════════════════════════ -->
+      <!-- SECTION 7: TEST COVERAGE                -->
+      <!-- ═══════════════════════════════════════ -->
+      <h2 class="tutorial-title"><span class="step-hash">*</span>TEST COVERAGE</h2>
+      <p class="tutorial-subtitle">29 zunit <code>@test</code> cases across 6 test files pin behavioural invariants: plugin-contract (entrypoint name, <code>zsh -n</code> clean parse, <code>#compdef</code> directive on completions), function-level contract (autoload presence, ZPWR_VERBS values, defensive fallback definitions), and surface syntax (every autoload file parses, every fn name matches its file stem). 21 additional <code>.sh</code> doc-hygiene gates pin README/docs/workflow structure &mdash; final newlines, body+html tags, h1 presence, https-only links, target=_blank rel=noopener pairing, no inline handlers, no placeholder hrefs, no deprecated tags.</p>
+
+      <table class="file-table">
+        <thead><tr><th>Test file</th><th class="num">@test</th><th>Pins</th></tr></thead>
+        <tbody>
+          <tr><td>tests/t-fns.zsh</td><td class="num">8</td><td>Every autoload fn is defined after sourcing the plugin; fn name matches file stem; <code>autoload/</code> on <code>fpath</code>; fallback <code>zpwrExists</code> + <code>zpwrPrettyPrint</code> respect existing definitions</td></tr>
+          <tr><td>tests/t-contract2.zsh</td><td class="num">6</td><td>ZPWR_VERBS contains all 10 expected keys when sourced under a stubbed zpwr; verb values reference real autoload fns</td></tr>
+          <tr><td>tests/t-contract3.zsh</td><td class="num">5</td><td>Env var defaults: <code>ZPWR_ALL_GIT_DIRS</code>, <code>_DIRTY</code>, <code>_CLEAN</code>, <code>ZPWR_TEMPFILE3</code>, <code>ZPWR_FZF</code> all set when unset</td></tr>
+          <tr><td>tests/t-contract4.zsh</td><td class="num">5</td><td>Existing env values are not clobbered when plugin is re-sourced; idempotent re-source contract</td></tr>
+          <tr><td>tests/t-contract.zsh</td><td class="num">3</td><td>Entrypoint stem matches plugin directory; entrypoint parses under <code>zsh -n</code>; every <code>_*</code> completion file starts with <code>#compdef</code></td></tr>
+          <tr><td>tests/t-syntax.zsh</td><td class="num">2</td><td>Every <code>autoload/*</code> file parses under <code>zsh -n</code>; no syntax drift on push</td></tr>
+        </tbody>
+        <tfoot><tr class="total-row"><td>6 zunit files</td><td class="num">29</td><td>+ 21 <code>.sh</code> doc-hygiene gates</td></tr></tfoot>
+      </table>
+
+      <h3 style="font-family:'Orbitron',sans-serif;font-size:11px;color:var(--accent);letter-spacing:1.5px;margin:1.5rem 0 0.5rem;">// DOC GATES</h3>
+      <table class="file-table">
+        <thead><tr><th>Gate</th><th>Pins</th></tr></thead>
+        <tbody>
+          <tr><td>docs-final-newline</td><td>Every <code>docs/*.html</code> ends with <code>\n</code>; git diff stays one-line clean</td></tr>
+          <tr><td>docs-has-body-tag</td><td>Every <code>docs/*.html</code> contains a <code>&lt;body&gt;</code> element</td></tr>
+          <tr><td>docs-has-h1</td><td>Every <code>docs/*.html</code> contains an <code>&lt;h1&gt;</code></td></tr>
+          <tr><td>docs-has-html-closing</td><td>Every <code>docs/*.html</code> closes <code>&lt;/html&gt;</code></td></tr>
+          <tr><td>docs-no-deprecated-tags</td><td>No <code>&lt;font&gt;</code>, <code>&lt;center&gt;</code>, <code>&lt;marquee&gt;</code>, <code>&lt;blink&gt;</code>, etc.</td></tr>
+          <tr><td>docs-no-http-links</td><td>No bare <code>http://</code> &mdash; https only</td></tr>
+          <tr><td>docs-no-inline-handlers</td><td>No inline DOM event-handler attributes (onclick, onchange, ...) &mdash; Tauri CSP guard</td></tr>
+          <tr><td>docs-no-placeholder-href</td><td>No placeholder anchor hrefs (literal hash or <code>javascript:</code> scheme); real anchors only</td></tr>
+          <tr><td>docs-target-blank-rel-noopener</td><td>Every <code>target="_blank"</code> pairs with <code>rel="noopener"</code></td></tr>
+          <tr><td>readme-final-newline / has-badges / has-h2-section / has-https-link</td><td>README structural pins</td></tr>
+          <tr><td>man-page-final-newline / no-trailing-whitespace / synopsis-section</td><td>Man-page hygiene (passes vacuously if no man pages)</td></tr>
+          <tr><td>tests-shell-executable / tests-shell-shebang</td><td>Every <code>tests/*.sh</code> is +x and has a shebang</td></tr>
+          <tr><td>workflow-final-newline / workflow-no-tabs</td><td>GitHub Actions YAML hygiene</td></tr>
+          <tr><td>cargo-final-newline</td><td>Vacuous (no Cargo.toml); kept for cross-repo template parity</td></tr>
+        </tbody>
+      </table>
+
+      <hr class="section-rule">
+
+      <!-- ═══════════════════════════════════════ -->
+      <!-- SECTION 8: KEY DESIGN DECISIONS         -->
+      <!-- ═══════════════════════════════════════ -->
+      <h2 class="tutorial-title"><span class="step-hash">?</span>KEY DESIGN DECISIONS</h2>
+      <p class="tutorial-subtitle">Each call-out is a decision the implementation could have gone either way on, with the rationale for the path taken.</p>
+
+      <div class="feature-grid">
+        <div class="feature-card"><h4>Flat-file caches, not SQLite</h4><p>One repo per line, sorted+uniq. <code>fzf</code> wants newline-separated input directly; <code>cat $CACHE | fzf</code> is the entire query path. SQLite would force a <code>SELECT ... INTO</code> bridge for every read and add a build-time dep on <code>sqlite3</code>. Flat text is the fastest format for the actual access pattern.</p></div>
+        <div class="feature-card"><h4>fd preferred, find fallback</h4><p><code>zpwrExists fd</code> probe at every regen. <code>fd</code> with <code>--threads=8</code> + <code>--hidden --no-ignore</code> walks a developer-laptop tree in seconds; <code>find -name .git -type d -prune</code> works everywhere zsh runs. The plugin doesn't break on a fresh server, but speeds up wherever <code>fd</code> is available.</p></div>
+        <div class="feature-card"><h4>One-pass dirty/clean bisect</h4><p><code>regenAllGitReposDirty</code> opens <code>exec 3&gt;</code> on the dirty cache and <code>exec 4&gt;</code> on the clean cache, walks the master list once, and writes each path to exactly one fd. No second pass, no <code>grep -vf</code> diff. The cleanup pair (<code>exec 3&gt;&amp;-</code>, <code>exec 4&gt;&amp;-</code>) closes both fds even on early return.</p></div>
+        <div class="feature-card"><h4>macOS Volumes mirror strip</h4><p>APFS mounts the user data root at <code>/System/Volumes/Data/</code> and the update mirror at <code>/System/Volumes/Update/mnt1/</code>. <code>find /</code> emits paths under both prefixes for the same physical repo. Two <code>perl -i -pe</code> passes strip those prefixes so <code>sort | uniq</code> collapses the dupes. Without this the cache double-counts every repo.</p></div>
+        <div class="feature-card"><h4>Sudo for the crawl</h4><p>The walk uses <code>sudo -E "PATH=$PATH" env fd ...</code> (or <code>sudo find /</code>) because the root filesystem contains repos owned by system users and read-restricted dirs that an unprivileged walk would miss or warn on. <code>-E</code> preserves the user's env (and <code>PATH=$PATH</code> ensures <code>fd</code> resolves) instead of switching to root's PATH.</p></div>
+        <div class="feature-card"><h4>Inner closures, not exported helpers</h4><p>Each search fn defines <code>zsh-git-repo-goThere</code> + <code>zsh-git-repo-listThere</code> as inner fns visible only inside its body. The shared tail (<code>searchGitCommon</code>) then resolves whichever closure was just defined. Avoids a global namespace collision when two search fns are nested in one shell session.</p></div>
+        <div class="feature-card"><h4>Echo-then-eval for transparency</h4><p><code>searchGitCommon</code> captures <code>zsh-git-repo-goThere</code> output (a literal <code>cd "..."</code> string), echoes it to the terminal, then <code>eval</code>s it. The user sees the <code>cd</code> command in scrollback &mdash; useful for re-running, sharing, or just understanding what the fzf pick resolved to.</p></div>
+        <div class="feature-card"><h4>Defensive zpwr stubs</h4><p>If <code>zpwrExists</code> or <code>zpwrPrettyPrint</code> aren't defined (plugin loaded outside zpwr), the entrypoint defines minimal fallbacks. The ZPWR_VERBS registration is guarded by <code>(( ${+ZPWR_VERBS} ))</code> so a standalone install gets all 8 functions usable directly without zpwr.</p></div>
+      </div>
+
+      <hr class="section-rule">
+
+      <!-- ═══════════════════════════════════════ -->
+      <!-- SECTION 9: STRATEGIC POSITION           -->
+      <!-- ═══════════════════════════════════════ -->
+      <h2 class="tutorial-title"><span class="step-hash">!</span>STRATEGIC POSITION</h2>
+      <p class="tutorial-subtitle">The plugin is the upstream feeder for any "jump to a git repo on this machine" workflow. <code>zpwr</code>'s <code>gitrepos*</code> verbs are the public face; the same files back ad-hoc prompts, dirty-tree indicators, and CI-side audits ("which repos on this host have uncommitted work").</p>
+
+      <div class="mapping-grid">
+        <div class="mapping-card"><h4>Prompt feeder</h4><p>The dirty cache is small (one line per dirty repo) and cheap to <code>grep -F "$PWD"</code> on every prompt redraw &mdash; faster than calling <code>git status</code> in a possibly-large repo.</p></div>
+        <div class="mapping-card"><h4>fzf cd</h4><p><code>gitrepos</code> + <code>fzf</code> is the canonical "jump to any of my repos" workflow. Master cache means the user can <code>cd</code> to a 5-deep nested repo by typing two letters of its basename.</p></div>
+        <div class="mapping-card"><h4>CI audit</h4><p>On a build host, <code>gitreposdirtylist</code> answers "did anything leak uncommitted changes on this box". The list mode is grep-friendly &mdash; the canonical use is <code>gitreposdirtylist | wc -l</code> as a health metric.</p></div>
+        <div class="mapping-card"><h4>Multi-repo dispatch</h4><p>The master cache is the input list for "run X across every repo on this machine" loops &mdash; the same primitive that backs <code>parallel</code>-style multi-repo pulls.</p></div>
+      </div>
+
+      <hr class="section-rule">
+
+      <!-- ═══════════════════════════════════════ -->
+      <!-- SECTION 10: LOAD MODEL                  -->
+      <!-- ═══════════════════════════════════════ -->
+      <h2 class="tutorial-title"><span class="step-hash">+</span>LOAD MODEL</h2>
+      <p class="tutorial-subtitle">The plugin is autoload-clean: sourcing the entrypoint costs only env-var defaults + <code>fpath</code> append + 10 hash assignments. The 8 autoload functions don't run until called, and each runs the file body exactly once (the trailing self-call inside each file is also the autoload-time body). Zero <code>git</code> invocations, zero <code>fd</code>/<code>find</code> invocations, zero stat calls at source time.</p>
+
+      <table class="file-table">
+        <thead><tr><th>Step</th><th>Cost</th><th>Side effect</th></tr></thead>
+        <tbody>
+          <tr><td>Source <code>zsh-git-repo-cache.plugin.zsh</code></td><td>~milliseconds</td><td>5 env-var defaults (only if unset), 2 fallback fn defs (only if missing), <code>fpath+=</code>, <code>autoload -Uz</code> register, ZPWR_VERBS hash assignment</td></tr>
+          <tr><td>First call to any <code>search*</code></td><td>cache hit: cheap; cache miss: <code>fd</code>/<code>find</code> walk</td><td>Cache files created/refreshed under <code>$HOME</code></td></tr>
+          <tr><td>First call to <code>regenAllGitRepos</code></td><td>fd: ~5s on a developer laptop; find: ~30s</td><td>Master cache rewritten</td></tr>
+          <tr><td>First call to <code>regenAllGitReposDirty</code></td><td>2 <code>git</code> calls per repo</td><td>Dirty + clean caches rewritten in one pass</td></tr>
+          <tr><td>Subsequent cached queries</td><td><code>cat</code> + <code>fzf</code> only</td><td>None (read-only)</td></tr>
+        </tbody>
+      </table>
+
+      <hr class="section-rule">
+
+      <!-- ═══════════════════════════════════════ -->
+      <!-- SECTION 11: GIT POSTURE                 -->
+      <!-- ═══════════════════════════════════════ -->
+      <h2 class="tutorial-title"><span class="step-hash">.</span>GIT POSTURE</h2>
+      <p class="tutorial-subtitle">42 commits on <code>main</code>. The repo carries no submodules, no generated artifacts, and no vendored deps &mdash; every byte is hand-written zsh + the docs cyberpunk template (<code>hud-static.css</code> + <code>tutorial.css</code>) shared across the MenkeTechnologies plugin stack. CI runs the zunit + doc-gate suite on every push (<code>.github/workflows/ci.yml</code>).</p>
+
+      <p style="font-size:11px;color:var(--text-muted);margin-top:0.5rem;">Compat floor: works on every zsh 5.x. Hard deps: <code>zsh</code>, <code>perl</code> (system perl, for the trailing-slash + Volumes-mirror strip passes), <code>git</code>. Soft deps: <code>fd</code> (accelerated crawl), <code>fzf</code> (interactive pick), <code>sudo</code> (full-disk crawl). No deps on zpwr &mdash; the plugin works standalone, ZPWR_VERBS is opt-in.</p>
+
+    </main>
+
+    <footer style="text-align:center;padding:2rem;font-size:10px;color:var(--text-muted);font-family:'Orbitron',sans-serif;letter-spacing:2px;">
+      ZSH-GIT-REPO-CACHE ENGINEERING REPORT &middot; 287 PLUGIN LOC &middot; 8 AUTOLOAD FNS &middot; 3 CACHE FILES &middot; 10 ZPWR VERBS &middot; 29 ZUNIT TESTS &middot; 21 DOC GATES &middot; MENKETECHNOLOGIES
+    </footer>
+  </div>
+
+  <script>
+    const html = document.documentElement;
+    const btnTheme = document.getElementById('btnTheme');
+    const btnCrt = document.getElementById('btnCrt');
+    const btnNeon = document.getElementById('btnNeon');
+    const crtH = document.getElementById('crtH');
+    const crtV = document.getElementById('crtV');
+    btnTheme?.addEventListener('click', () => {
+      html.setAttribute('data-theme', html.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+    });
+    btnCrt?.addEventListener('click', () => {
+      btnCrt.classList.toggle('active');
+      const on = btnCrt.classList.contains('active');
+      if (crtH) crtH.style.display = on ? '' : 'none';
+      if (crtV) crtV.style.display = on ? '' : 'none';
+    });
+    btnNeon?.addEventListener('click', () => {
+      btnNeon.classList.toggle('active');
+      document.querySelector('.app')?.classList.toggle('neon-off');
+    });
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.bar-fill').forEach(bar => {
+        const w = bar.style.width;
+        bar.style.width = '0';
+        requestAnimationFrame(() => { requestAnimationFrame(() => { bar.style.width = w; }); });
+      });
+    });
+  </script>
+</body>
+</html>
