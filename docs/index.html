@@ -71,6 +71,33 @@
       <p class="tutorial-subtitle"><strong>Every git repo on disk, instantly searchable.</strong> Crawls the root filesystem to locate every git repository and caches results for instant retrieval. Uses <code>fd</code> when available, falls back to <code>find</code>. Integrates with <a href="https://github.com/junegunn/fzf">fzf</a> for interactive selection.</p>
 
       <section class="tutorial-section">
+        <h2>Overview</h2>
+        <p>The plugin builds three plain-text caches under <code>$HOME</code> &mdash; one path per line, sorted and deduped &mdash; and exposes 8 autoload functions that read or rebuild them. The flow is three stages:</p>
+        <pre>[ SCAN ] ──> [ CACHE ] ──> [ QUERY ]
+   │             │              │
+  fd / find   ~/.zsh-git-     fzf / list
+   @ /         repo-cache     output + cd</pre>
+        <p><strong>Scan.</strong> <code>regenAllGitRepos</code> runs <code>sudo fd '\.git$' / --type d --threads=8 --hidden --no-ignore</code> (or <code>sudo find / -name .git -type d -prune</code> when <code>fd</code> is absent), strips the trailing <code>/.git</code>, removes the macOS <code>/System/Volumes/Data</code> and <code>/System/Volumes/Update/mnt1</code> mirror prefixes (only when <code>$ZPWR_OS_TYPE == darwin</code>), then <code>sort | uniq</code> into the master cache.</p>
+        <p><strong>Bisect.</strong> <code>regenAllGitReposDirty</code> walks the master list once, runs <code>git diff-index --quiet HEAD</code> + <code>git ls-files --exclude-standard --others</code> on each repo, and writes dirty paths to one cache and clean paths to another via two concurrent file descriptors (<code>exec 3&gt;</code> / <code>exec 4&gt;</code>) &mdash; both caches in a single pass.</p>
+        <p><strong>Query.</strong> Search functions either live-walk the master list (always fresh) or read the pre-bisected dirty/clean caches (cheap). In default mode they pipe through <code>fzf</code>, echo the resolved <code>cd "..."</code>, and <code>eval</code> it; in <code>list</code> mode they emit raw paths to stdout.</p>
+      </section>
+
+      <section class="tutorial-section">
+        <h2>Requirements</h2>
+        <table class="example-tbl">
+          <tbody>
+            <tr><td><code>zsh</code></td><td>required &mdash; the plugin host (works on zsh 5.x)</td></tr>
+            <tr><td><code>git</code></td><td>required &mdash; dirty/clean probing via <code>git diff-index</code> / <code>git ls-files</code></td></tr>
+            <tr><td><code>perl</code></td><td>required &mdash; trailing-<code>/.git</code> strip and macOS Volumes-mirror strip passes</td></tr>
+            <tr><td><code>sudo</code></td><td>required for a full-disk crawl &mdash; the scan runs <code>sudo</code> to read root-owned and restricted dirs</td></tr>
+            <tr><td><code>fd</code></td><td>optional &mdash; accelerated 8-thread crawl; falls back to <code>find</code> when missing</td></tr>
+            <tr><td><code>fzf</code></td><td>optional &mdash; interactive picker for the non-<code>list</code> query modes</td></tr>
+            <tr><td><code>zpwr</code></td><td>optional &mdash; enables the 10 <code>gitrepos*</code> verbs; the functions work standalone without it</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="tutorial-section">
         <h2>Install</h2>
 <pre># Zinit
 zinit light MenkeTechnologies/zsh-git-repo-cache
@@ -100,14 +127,50 @@ source zsh-git-repo-cache/zsh-git-repo-cache.plugin.zsh</pre>
         <h2>Functions</h2>
         <table class="example-tbl">
           <tbody>
-            <tr><td><code>zsh-git-repo-regenAllGitRepos</code></td><td>scorched-earth rescan of <code>/</code></td></tr>
-            <tr><td><code>zsh-git-repo-regenAllGitReposDirty</code></td><td>rebuild dirty cache</td></tr>
-            <tr><td><code>zsh-git-repo-searchAllGitRepos</code></td><td>query all indexed repos</td></tr>
-            <tr><td><code>zsh-git-repo-searchDirtyGitRepos</code></td><td>only repos with uncommitted changes</td></tr>
-            <tr><td><code>zsh-git-repo-searchCleanGitRepos</code></td><td>only clean working trees</td></tr>
-            <tr><td><code>zsh-git-repo-search{Dirty,Clean}GitReposCache</code></td><td>cached variants &mdash; auto-generate if missing</td></tr>
+            <tr><td><code>zsh-git-repo-regenAllGitRepos</code></td><td>scorched-earth rescan of <code>/</code> &mdash; rebuilds the master cache</td></tr>
+            <tr><td><code>zsh-git-repo-regenAllGitReposDirty</code></td><td>bisect master into dirty + clean caches in one pass (regenerates master first if it is missing/empty)</td></tr>
+            <tr><td><code>zsh-git-repo-searchAllGitRepos</code></td><td>query all indexed repos (reads the master cache)</td></tr>
+            <tr><td><code>zsh-git-repo-searchDirtyGitRepos</code></td><td>live-walk: only repos with uncommitted changes or untracked files</td></tr>
+            <tr><td><code>zsh-git-repo-searchCleanGitRepos</code></td><td>live-walk: only clean working trees (no staged diff, no untracked)</td></tr>
+            <tr><td><code>zsh-git-repo-searchDirtyGitReposCache</code></td><td>read the dirty cache &mdash; regenerates it if missing/empty</td></tr>
+            <tr><td><code>zsh-git-repo-searchCleanGitReposCache</code></td><td>read the clean cache &mdash; regenerates it if missing/empty</td></tr>
+            <tr><td><code>zsh-git-repo-searchGitCommon</code></td><td>shared tail &mdash; captures the inner <code>goThere</code> output, echoes the <code>cd "..."</code>, then evals it</td></tr>
           </tbody>
         </table>
+      </section>
+
+      <section class="tutorial-section">
+        <h2>Invocation contract</h2>
+        <p>Every <code>search*</code> function reads exactly two positional arguments &mdash; no flags, no <code>getopts</code>. The ZPWR_VERBS list entries encode the same two slots (<code>... n list</code> means <code>$1=n</code>, <code>$2=list</code>).</p>
+        <table class="example-tbl">
+          <tbody>
+            <tr><td><code>$1</code> = <code>regen</code></td><td>Force a rebuild before querying. Any other value (e.g. <code>n</code>) skips the forced rebuild &mdash; the cache is still auto-rebuilt when the file is missing or empty.</td></tr>
+            <tr><td><code>$2</code> = <code>list</code></td><td>Emit raw paths to stdout. Any other value (or none) runs the fzf picker, echoes the resolved <code>cd "..."</code>, and evals it.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="tutorial-section">
+        <h2>Usage</h2>
+<pre># fzf-pick any repo on the machine and cd into it (default mode)
+zsh-git-repo-searchAllGitRepos
+
+# force a fresh rescan of / first, then fzf-pick
+zsh-git-repo-searchAllGitRepos regen
+
+# list dirty repos to stdout — live walk, no fzf, no cd
+zsh-git-repo-searchDirtyGitRepos n list
+
+# count repos with uncommitted work on this host
+zsh-git-repo-searchDirtyGitRepos n list | wc -l
+
+# read the pre-bisected caches instead of live-walking
+zsh-git-repo-searchDirtyGitReposCache n list
+zsh-git-repo-searchCleanGitReposCache n list
+
+# rebuild the caches explicitly
+zsh-git-repo-regenAllGitRepos       # master cache
+zsh-git-repo-regenAllGitReposDirty  # dirty + clean caches</pre>
       </section>
 
       <section class="tutorial-section">
@@ -123,6 +186,40 @@ gitreposclean             search clean repos in fzf
 gitreposdirty             search dirty repos in fzf
 gitreposcleancache        search clean repos in fzf (cached)
 gitreposdirtycache        search dirty repos in fzf (cached)</pre>
+      </section>
+
+      <section class="tutorial-section">
+        <h2>Configuration</h2>
+        <p>Every variable below is defaulted by the plugin only when unset, so a pre-existing zpwr environment keeps its own values:</p>
+        <table class="example-tbl">
+          <tbody>
+            <tr><td><code>ZPWR_ALL_GIT_DIRS</code></td><td>master cache path &mdash; default <code>~/.zsh-git-repo-cache</code></td></tr>
+            <tr><td><code>ZPWR_ALL_GIT_DIRS_DIRTY</code></td><td>dirty cache path &mdash; default <code>~/.zsh-git-repo-cache-dirty</code></td></tr>
+            <tr><td><code>ZPWR_ALL_GIT_DIRS_CLEAN</code></td><td>clean cache path &mdash; default <code>~/.zsh-git-repo-cache-clean</code></td></tr>
+            <tr><td><code>ZPWR_TEMPFILE3</code></td><td>scratch buffer for the inline <code>perl</code> edits &mdash; default <code>$TMPDIR/.zsh-git-repo-temp</code></td></tr>
+            <tr><td><code>ZPWR_FZF</code></td><td>fzf invocation name &mdash; default <code>fzf</code> (override for a custom wrapper)</td></tr>
+          </tbody>
+        </table>
+        <p>Two more variables are <strong>read but never written</strong> by this plugin &mdash; the caller (typically zpwr) supplies them:</p>
+        <table class="example-tbl">
+          <tbody>
+            <tr><td><code>FZF_SEARCH_GIT_OPTS</code></td><td>extra fzf flags appended verbatim: <code>eval "$ZPWR_FZF $FZF_SEARCH_GIT_OPTS"</code></td></tr>
+            <tr><td><code>ZPWR_OS_TYPE</code></td><td>when <code>== darwin</code>, the scan strips the macOS <code>/System/Volumes</code> mirror prefixes</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="tutorial-section">
+        <h2>Troubleshooting</h2>
+        <table class="example-tbl">
+          <tbody>
+            <tr><td>Cache is empty / stale</td><td>Run <code>zsh-git-repo-regenAllGitRepos</code> (master) then <code>zsh-git-repo-regenAllGitReposDirty</code> (dirty + clean). Search functions also auto-regenerate when a cache file is missing or empty.</td></tr>
+            <tr><td>Scan asks for a sudo password</td><td>Expected &mdash; the crawl runs <code>sudo</code> to read root-owned and restricted directories under <code>/</code>.</td></tr>
+            <tr><td>Slow scan</td><td>Install <code>fd</code>; the plugin prefers it (<code>--threads=8 --hidden --no-ignore</code>) and falls back to <code>find</code> only when <code>fd</code> is absent.</td></tr>
+            <tr><td>Duplicate repos on macOS</td><td>Ensure <code>ZPWR_OS_TYPE=darwin</code> so the <code>/System/Volumes/Data</code> and <code>/System/Volumes/Update/mnt1</code> mirror prefixes are stripped before <code>sort | uniq</code>.</td></tr>
+            <tr><td><code>gitrepos*</code> verbs missing</td><td>The verbs register only inside zpwr (guarded by <code>(( ${+ZPWR_VERBS} ))</code>). Call the <code>zsh-git-repo-*</code> functions directly for a standalone install.</td></tr>
+          </tbody>
+        </table>
       </section>
 
       <section class="tutorial-section">

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark light">
-  <meta name="description" content="zsh-git-repo-cache — Engineering report. Plugin that indexes every git repo on disk (fd/find) into 3 cache files (all / dirty / clean), surfaced through 7 autoload functions and 10 ZPWR_VERBS dispatch entries. 8 autoload fns, 287 LOC, 29 zunit @test cases pinning entrypoint, ZPWR_VERBS schema, autoload coverage, and zsh -n parse.">
+  <meta name="description" content="zsh-git-repo-cache — Engineering report. Plugin that indexes every git repo on disk (fd/find) into 3 cache files (all / dirty / clean), surfaced through 8 autoload functions and 10 ZPWR_VERBS dispatch entries. 342 LOC total (55 entrypoint + 287 autoload), 29 zunit @test cases pinning entrypoint, ZPWR_VERBS schema, autoload coverage, and zsh -n parse, plus 21 .sh doc/hygiene gates.">
   <title>zsh-git-repo-cache &mdash; Engineering Report</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -88,23 +88,23 @@
       <p class="tutorial-subtitle">zsh-git-repo-cache is the indexing layer for "every git repo on the machine". The plugin crawls the root filesystem once with <code>fd</code> (or falls back to <code>find</code>), strips trailing <code>/.git</code>, removes macOS <code>/System/Volumes</code> read-only mirror prefixes, and writes the deduped, sorted list to <code>$ZPWR_ALL_GIT_DIRS</code>. A second pass walks each path with <code>git diff-index --quiet HEAD</code> + <code>git ls-files --exclude-standard --others</code> and bisects the master list into a dirty and clean cache. All queries &mdash; live and cache-backed, list and fzf-interactive &mdash; are 6 thin shims over those three files. The plugin is the upstream feeder for <code>cd</code>-like fzf workflows in <code>zpwr</code>; its job is to make the master list cheap enough that the prompt can read it on every command.</p>
 
       <div class="stat-grid">
-        <div class="stat-card"><div class="stat-val">287</div><div class="stat-label">Plugin LOC</div></div>
+        <div class="stat-card"><div class="stat-val">342</div><div class="stat-label">Plugin LOC</div></div>
         <div class="stat-card"><div class="stat-val accent">8</div><div class="stat-label">Autoload Fns</div></div>
         <div class="stat-card"><div class="stat-val">3</div><div class="stat-label">Cache Files</div></div>
         <div class="stat-card"><div class="stat-val">10</div><div class="stat-label">ZPWR Verbs</div></div>
         <div class="stat-card"><div class="stat-val green">29</div><div class="stat-label">zunit @test Cases</div></div>
         <div class="stat-card"><div class="stat-val">6</div><div class="stat-label">Test Files</div></div>
         <div class="stat-card"><div class="stat-val">21</div><div class="stat-label">Docs/Repo Gates</div></div>
-        <div class="stat-card"><div class="stat-val">42</div><div class="stat-label">Git Commits</div></div>
+        <div class="stat-card"><div class="stat-val">45</div><div class="stat-label">Git Commits</div></div>
       </div>
 
       <div style="margin:1.2rem 0;">
-        <p style="font-size:11px;color:var(--text-muted);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:4px;font-family:'Orbitron',sans-serif;font-weight:700;">Plugin Source &mdash; 287 LOC</p>
+        <p style="font-size:11px;color:var(--text-muted);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:4px;font-family:'Orbitron',sans-serif;font-weight:700;">Plugin Source &mdash; 342 LOC</p>
         <div class="bar-wrap" style="height:24px;">
-          <div class="bar-fill cyan" style="width:80.8%;"></div>
-          <span class="bar-pct" style="font-size:12px;">232 autoload / 55 plugin entrypoint &middot; 80.8% autoload</span>
+          <div class="bar-fill cyan" style="width:83.9%;"></div>
+          <span class="bar-pct" style="font-size:12px;">287 autoload / 55 plugin entrypoint &middot; 83.9% autoload</span>
         </div>
-        <p style="font-size:10px;color:var(--text-muted);margin-top:4px;">Entrypoint (<code>zsh-git-repo-cache.plugin.zsh</code>, 55 LOC) only sets default env vars, defines a fallback <code>zpwrExists</code> + <code>zpwrPrettyPrint</code>, appends <code>autoload/</code> to <code>fpath</code>, autoloads every fn, and registers 10 <code>ZPWR_VERBS</code> when running under zpwr. All real work lives in the 8 autoload functions (232 LOC) lazy-loaded by zsh's <code>autoload -Uz</code>.</p>
+        <p style="font-size:10px;color:var(--text-muted);margin-top:4px;">Entrypoint (<code>zsh-git-repo-cache.plugin.zsh</code>, 55 LOC) only sets default env vars, defines a fallback <code>zpwrExists</code> + <code>zpwrPrettyPrint</code>, appends <code>autoload/</code> to <code>fpath</code>, autoloads every fn, and registers 10 <code>ZPWR_VERBS</code> when running under zpwr. All real work lives in the 8 autoload functions (287 LOC) lazy-loaded by zsh's <code>autoload -Uz</code>.</p>
       </div>
 
       <hr class="section-rule">
@@ -128,7 +128,7 @@
           <tr><td>autoload/zsh-git-repo-regenAllGitRepos</td><td class="num">25</td><td>Scorched-earth rescan: <code>fd '\.git$' /</code> (or <code>find / -name .git -type d -prune</code>), strip trailing <code>/.git</code>, strip macOS <code>/System/Volumes</code> mirror prefixes, sort + uniq</td></tr>
           <tr><td>autoload/zsh-git-repo-searchGitCommon</td><td class="num">12</td><td>Shared tail: capture <code>zsh-git-repo-goThere</code> output, echo it for transparency, eval to actually <code>cd</code></td></tr>
         </tbody>
-        <tfoot><tr class="total-row"><td>9 source files</td><td class="num">287</td><td>1 entrypoint + 8 autoload fns</td></tr></tfoot>
+        <tfoot><tr class="total-row"><td>9 source files</td><td class="num">342</td><td>1 entrypoint (55) + 8 autoload fns (287)</td></tr></tfoot>
       </table>
 
       <hr class="section-rule">
@@ -147,8 +147,11 @@
           <tr><td>ZPWR_ALL_GIT_DIRS_CLEAN</td><td><code>~/.zsh-git-repo-cache-clean</code></td><td><code>regenAllGitReposDirty</code></td><td>Repos with no staged diff and no untracked files</td></tr>
           <tr><td>ZPWR_TEMPFILE3</td><td><code>$TMPDIR/.zsh-git-repo-temp</code></td><td><code>regenAllGitRepos</code></td><td>Scratch buffer for inline <code>perl -i -pe</code> edits before sort+uniq</td></tr>
           <tr><td>ZPWR_FZF</td><td><code>fzf</code></td><td>plugin entrypoint</td><td>Fzf invocation name (override for custom wrappers)</td></tr>
+          <tr><td>FZF_SEARCH_GIT_OPTS</td><td><em>(unset)</em></td><td>caller / zpwr</td><td>Consumed-only: appended verbatim to <code>$ZPWR_FZF</code> in every <code>goThere</code> closure (<code>eval "$ZPWR_FZF $FZF_SEARCH_GIT_OPTS"</code>). Extra fzf flags &mdash; not defaulted by the plugin</td></tr>
+          <tr><td>ZPWR_OS_TYPE</td><td><em>(unset)</em></td><td>caller / zpwr</td><td>Consumed-only: when <code>== darwin</code>, <code>regenAllGitRepos</code> strips the macOS <code>/System/Volumes</code> mirror prefixes. Any other value skips the macOS-only passes</td></tr>
         </tbody>
       </table>
+      <p style="font-size:11px;color:var(--text-muted);margin-top:0.5rem;">Three of these (<code>ZPWR_ALL_GIT_DIRS</code>, <code>_DIRTY</code>, <code>_CLEAN</code>) plus <code>ZPWR_TEMPFILE3</code> and <code>ZPWR_FZF</code> are defaulted by the entrypoint only when unset, so a pre-existing zpwr environment keeps its own values (pinned by the idempotent re-source contract in <code>t-contract4.zsh</code>). The last two &mdash; <code>FZF_SEARCH_GIT_OPTS</code> and <code>ZPWR_OS_TYPE</code> &mdash; are read but never written by this plugin; the caller (typically zpwr) supplies them.</p>
 
       <hr class="section-rule">
 
@@ -213,6 +216,39 @@
       </table>
 
       <p style="font-size:11px;color:var(--text-muted);margin-top:0.5rem;">Each query fn defines two inner closures &mdash; <code>zsh-git-repo-goThere</code> (pipe through fzf, materialize a <code>cd "..."</code> command) and <code>zsh-git-repo-listThere</code> (raw stdout). The dispatch is one <code>if [[ $cmd == list ]]</code> guard; the regen guard (<code>shouldRegen == regen</code> OR cache missing OR cache empty) is identical across all 5 search variants so adding a new cache type is a copy-paste-rename, not a redesign.</p>
+
+      <hr class="section-rule">
+
+      <!-- ═══════════════════════════════════════ -->
+      <!-- SECTION: INVOCATION CONTRACT            -->
+      <!-- ═══════════════════════════════════════ -->
+      <h2 class="tutorial-title"><span class="step-hash">%</span>INVOCATION CONTRACT</h2>
+      <p class="tutorial-subtitle">Every search function reads exactly two positional arguments: <code>shouldRegen="$1"</code> and <code>cmd="$2"</code>. There are no flags, no <code>getopts</code>, no long options &mdash; positional only. The same two-slot contract is what the ZPWR_VERBS values encode (<code>... n list</code> = <code>shouldRegen=n</code>, <code>cmd=list</code>).</p>
+
+      <table class="file-table">
+        <thead><tr><th>Slot</th><th>Variable</th><th>Trigger value</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td><code>$1</code></td><td><code>shouldRegen</code></td><td><code>regen</code></td><td>Force a rebuild before querying. Any other value (e.g. <code>n</code>) skips the forced rebuild &mdash; but the cache is still rebuilt automatically if the file is missing (<code>! -f</code>) or empty (<code>! -s</code>)</td></tr>
+          <tr><td><code>$2</code></td><td><code>cmd</code></td><td><code>list</code></td><td>Emit raw paths to stdout via <code>zsh-git-repo-listThere</code>. Any other value (or none) runs <code>zsh-git-repo-searchGitCommon</code>: fzf-pick, echo the resolved <code>cd "..."</code>, then <code>eval</code> it</td></tr>
+        </tbody>
+      </table>
+
+      <pre style="margin:0.5rem 0;padding:1rem;border:1px solid var(--border);background:var(--bg-primary);color:var(--text-dim);font-size:11px;line-height:1.7;overflow-x:auto;"># fzf-pick all repos and cd into the choice (default mode)
+zsh-git-repo-searchAllGitRepos
+
+# force a rescan of / first, then fzf-pick
+zsh-git-repo-searchAllGitRepos regen
+
+# emit dirty repos to stdout (no fzf, no cd) — note the n placeholder for $1
+zsh-git-repo-searchDirtyGitRepos n list
+
+# count dirty repos on this host
+zsh-git-repo-searchDirtyGitRepos n list | wc -l
+
+# read the dirty cache instead of live-walking every repo
+zsh-git-repo-searchDirtyGitReposCache n list</pre>
+
+      <p style="font-size:11px;color:var(--text-muted);margin-top:0.5rem;">The two <code>regen*</code> functions take no meaningful arguments &mdash; <code>regenAllGitReposDirty</code> calls <code>regenAllGitRepos regen</code> internally only when the master cache is missing or empty (<code>! -s "$ZPWR_ALL_GIT_DIRS"</code>). Both append <code>"$@"</code> as a trailing self-call so each autoload file is also directly <code>source</code>-able as a script.</p>
 
       <hr class="section-rule">
 
@@ -336,14 +372,14 @@
       <!-- SECTION 11: GIT POSTURE                 -->
       <!-- ═══════════════════════════════════════ -->
       <h2 class="tutorial-title"><span class="step-hash">.</span>GIT POSTURE</h2>
-      <p class="tutorial-subtitle">42 commits on <code>main</code>. The repo carries no submodules, no generated artifacts, and no vendored deps &mdash; every byte is hand-written zsh + the docs cyberpunk template (<code>hud-static.css</code> + <code>tutorial.css</code>) shared across the MenkeTechnologies plugin stack. CI runs the zunit + doc-gate suite on every push (<code>.github/workflows/ci.yml</code>).</p>
+      <p class="tutorial-subtitle">45 commits on <code>main</code>. The repo carries no submodules, no generated artifacts, and no vendored deps &mdash; every byte is hand-written zsh + the docs cyberpunk template (<code>hud-static.css</code> + <code>tutorial.css</code>) shared across the MenkeTechnologies plugin stack. CI runs the zunit + doc-gate suite on every push (<code>.github/workflows/ci.yml</code>).</p>
 
       <p style="font-size:11px;color:var(--text-muted);margin-top:0.5rem;">Compat floor: works on every zsh 5.x. Hard deps: <code>zsh</code>, <code>perl</code> (system perl, for the trailing-slash + Volumes-mirror strip passes), <code>git</code>. Soft deps: <code>fd</code> (accelerated crawl), <code>fzf</code> (interactive pick), <code>sudo</code> (full-disk crawl). No deps on zpwr &mdash; the plugin works standalone, ZPWR_VERBS is opt-in.</p>
 
     </main>
 
     <footer style="text-align:center;padding:2rem;font-size:10px;color:var(--text-muted);font-family:'Orbitron',sans-serif;letter-spacing:2px;">
-      ZSH-GIT-REPO-CACHE ENGINEERING REPORT &middot; 287 PLUGIN LOC &middot; 8 AUTOLOAD FNS &middot; 3 CACHE FILES &middot; 10 ZPWR VERBS &middot; 29 ZUNIT TESTS &middot; 21 DOC GATES &middot; MENKETECHNOLOGIES
+      ZSH-GIT-REPO-CACHE ENGINEERING REPORT &middot; 342 PLUGIN LOC &middot; 8 AUTOLOAD FNS &middot; 3 CACHE FILES &middot; 10 ZPWR VERBS &middot; 29 ZUNIT TESTS &middot; 21 DOC GATES &middot; MENKETECHNOLOGIES
     </footer>
   </div>
 
