@@ -17,9 +17,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![zsh](https://img.shields.io/badge/zsh-plugin-cyan.svg)](https://github.com/MenkeTechnologies/zpwr)
 
-### `[GIT REPO METADATA CACHE FOR ZSH // FAST PROMPT, FAST cd]`
+### `[GIT REPO CACHE FOR ZSH // INDEX EVERY REPO, FZF cd]`
 
-> *"Sub-millisecond `git status` in the prompt, even in massive worktrees."*
+> *"Every git repo on disk, one fzf pick away."*
 
 > *Jack into the filesystem. Index every git repo. Know everything.*
 
