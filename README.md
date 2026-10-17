@@ -75,10 +75,10 @@ git clone https://github.com/MenkeTechnologies/zsh-git-repo-cache \
 ## [0x03] // FUNCTIONS
 
 ### `zsh-git-repo-regenAllGitRepos`
-> Scorched earth rescan. Crawls `/` and rebuilds the master cache.
+> Rescan. Crawls `/` via `sudo` (`fd` or `find`) and rebuilds the master cache.
 
 ### `zsh-git-repo-regenAllGitReposDirty`
-> Regenerate the dirty repos cache.
+> Regenerate the dirty and clean repo caches from the master cache (regenerates the master cache first if it is empty).
 
 ### `zsh-git-repo-searchAllGitRepos`
 > Query the cache. Returns all indexed repos.
